@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Falcon Forge - Free online image converter. Convert images to PNG, JPG, WebP, GIF, BMP, ICO instantly in your browser. No uploads required, 100% private.">
+    <meta name="keywords" content="image converter, png converter, jpg converter, webp converter, online image converter, free image converter">
+    <meta name="theme-color" content="#0a0a0f">
     <title>Falcon Forge — Image Converter</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -17,6 +20,15 @@
             --border-color: #2a2a3a;
             --glow-cyan: 0 0 30px rgba(0, 245, 212, 0.3);
             --glow-magenta: 0 0 30px rgba(247, 37, 133, 0.3);
+        }
+
+        /* Light theme */
+        [data-theme="light"] {
+            --bg-dark: #f5f5f7;
+            --bg-card: #ffffff;
+            --text-primary: #1a1a2e;
+            --text-secondary: #666680;
+            --border-color: #d0d0e0;
         }
 
         * {
@@ -544,6 +556,557 @@
             text-decoration: none;
         }
 
+        .footer-text a:hover {
+            text-decoration: underline;
+        }
+
+        /* Theme toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+        }
+
+        .theme-toggle svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-primary);
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle:hover svg {
+            transform: rotate(30deg);
+        }
+
+        .sun-icon, .moon-icon {
+            display: none;
+        }
+
+        [data-theme="dark"] .moon-icon,
+        :root:not([data-theme]) .moon-icon {
+            display: block;
+        }
+
+        [data-theme="light"] .sun-icon {
+            display: block;
+        }
+
+        [data-theme="light"] .moon-icon {
+            display: none;
+        }
+
+        /* Keyboard shortcuts modal */
+        .shortcuts-btn {
+            position: fixed;
+            top: 20px;
+            right: 80px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            transition: all 0.3s ease;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .shortcuts-btn:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal h3 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .shortcut-item:last-child {
+            border-bottom: none;
+        }
+
+        .shortcut-key {
+            background: rgba(0, 245, 212, 0.1);
+            border: 1px solid var(--accent-cyan);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+        }
+
+        .shortcut-desc {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .modal-close {
+            margin-top: 20px;
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        /* Image dimensions display */
+        .image-dimensions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .dimension-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: rgba(247, 37, 133, 0.1);
+            border: 1px solid var(--accent-magenta);
+            border-radius: 100px;
+            font-size: 0.7rem;
+            color: var(--accent-magenta);
+        }
+
+        /* Image controls (rotate, flip) */
+        .image-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .control-btn {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .control-btn svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        /* Resize section */
+        .resize-section {
+            margin-top: 25px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+        }
+
+        .resize-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+
+        .resize-toggle input {
+            display: none;
+        }
+
+        .toggle-switch {
+            width: 44px;
+            height: 24px;
+            background: var(--border-color);
+            border-radius: 12px;
+            position: relative;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: var(--text-primary);
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .resize-toggle input:checked + .toggle-switch {
+            background: var(--accent-cyan);
+        }
+
+        .resize-toggle input:checked + .toggle-switch::after {
+            transform: translateX(20px);
+        }
+
+        .resize-inputs {
+            display: none;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .resize-inputs.active {
+            display: flex;
+        }
+
+        .resize-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .resize-field label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .resize-field input {
+            width: 100px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .resize-field input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        .aspect-ratio-lock {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            padding: 10px;
+        }
+
+        .aspect-ratio-lock input {
+            display: none;
+        }
+
+        .lock-icon {
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            transition: all 0.3s ease;
+        }
+
+        .aspect-ratio-lock:hover {
+            color: var(--accent-cyan);
+        }
+
+        .aspect-ratio-lock input:checked ~ .lock-icon {
+            stroke: var(--accent-cyan);
+        }
+
+        /* Filename input */
+        .filename-section {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .filename-field {
+            flex: 1;
+        }
+
+        .filename-field label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .filename-field input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .filename-field input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        /* Copy to clipboard button */
+        .secondary-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .secondary-btn {
+            flex: 1;
+            padding: 14px 20px;
+            font-family: 'Syne', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--text-primary);
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .secondary-btn:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .secondary-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        /* Multiple files support */
+        .file-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .file-item-thumb {
+            width: 50px;
+            height: 50px;
+            border-radius: 6px;
+            object-fit: cover;
+            background: var(--border-color);
+        }
+
+        .file-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-item-name {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-item-size {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .file-item-remove {
+            background: transparent;
+            border: none;
+            color: var(--accent-magenta);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        .file-item-remove:hover {
+            background: rgba(247, 37, 133, 0.1);
+        }
+
+        .file-item-remove svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .add-more-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            background: transparent;
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .add-more-btn:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .add-more-btn svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .batch-info {
+            text-align: center;
+            padding: 10px;
+            background: rgba(0, 245, 212, 0.05);
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Skip link for accessibility */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--accent-cyan);
+            color: var(--bg-dark);
+            padding: 8px 16px;
+            z-index: 1001;
+            text-decoration: none;
+            font-weight: 600;
+            border-radius: 0 0 8px 0;
+        }
+
+        .skip-link:focus {
+            top: 0;
+        }
+
+        /* Focus styles for accessibility */
+        *:focus-visible {
+            outline: 2px solid var(--accent-cyan);
+            outline-offset: 2px;
+        }
+
+        button:focus-visible,
+        input:focus-visible,
+        label:focus-visible {
+            outline: 2px solid var(--accent-cyan);
+            outline-offset: 2px;
+        }
+
         /* Toast notification */
         .toast {
             position: fixed;
@@ -594,8 +1157,81 @@
     </style>
 </head>
 <body>
-    <div class="bg-grid"></div>
-    <div class="bg-gradient"></div>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <div class="bg-grid" aria-hidden="true"></div>
+    <div class="bg-gradient" aria-hidden="true"></div>
+
+    <!-- Theme toggle button -->
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light theme" title="Toggle theme (T)">
+        <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+    </button>
+
+    <!-- Keyboard shortcuts button -->
+    <button class="shortcuts-btn" id="shortcutsBtn" aria-label="View keyboard shortcuts" title="Keyboard shortcuts (?)">
+        <span>?</span>
+    </button>
+
+    <!-- Keyboard shortcuts modal -->
+    <div class="modal-overlay" id="shortcutsModal" role="dialog" aria-labelledby="shortcutsTitle" aria-modal="true">
+        <div class="modal">
+            <h3 id="shortcutsTitle">⌨️ Keyboard Shortcuts</h3>
+            <div class="shortcut-item">
+                <span class="shortcut-desc">Open file dialog</span>
+                <span class="shortcut-key">O</span>
+            </div>
+            <div class="shortcut-item">
+                <span class="shortcut-desc">Convert & download</span>
+                <span class="shortcut-key">Enter</span>
+            </div>
+            <div class="shortcut-item">
+                <span class="shortcut-desc">Copy to clipboard</span>
+                <span class="shortcut-key">C</span>
+            </div>
+            <div class="shortcut-item">
+                <span class="shortcut-desc">Remove image</span>
+                <span class="shortcut-key">Delete</span>
+            </div>
+            <div class="shortcut-item">
+                <span class="shortcut-desc">Rotate left</span>
+                <span class="shortcut-key">←</span>
+            </div>
+            <div class="shortcut-item">
+                <span class="shortcut-desc">Rotate right</span>
+                <span class="shortcut-key">→</span>
+            </div>
+            <div class="shortcut-item">
+                <span class="shortcut-desc">Flip horizontal</span>
+                <span class="shortcut-key">H</span>
+            </div>
+            <div class="shortcut-item">
+                <span class="shortcut-desc">Flip vertical</span>
+                <span class="shortcut-key">V</span>
+            </div>
+            <div class="shortcut-item">
+                <span class="shortcut-desc">Toggle theme</span>
+                <span class="shortcut-key">T</span>
+            </div>
+            <div class="shortcut-item">
+                <span class="shortcut-desc">Close modal</span>
+                <span class="shortcut-key">Esc</span>
+            </div>
+            <button class="modal-close" id="closeShortcuts">Close</button>
+        </div>
+    </div>
 
     <div class="container">
         <header>
@@ -603,36 +1239,87 @@
             <p class="tagline">Transform your images instantly</p>
         </header>
 
-        <main class="converter-card">
-            <div class="drop-zone" id="dropZone">
-                <div class="drop-zone-icon">
+        <main class="converter-card" id="main-content" role="main" aria-label="Image converter">
+            <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Drop zone for image upload. Click or drag and drop images here.">
+                <div class="drop-zone-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                         <polyline points="17 8 12 3 7 8"/>
                         <line x1="12" y1="3" x2="12" y2="15"/>
                     </svg>
                 </div>
-                <p class="drop-zone-text">Drop your image here or click to browse</p>
-                <p class="drop-zone-hint">Supports PNG, JPG, JPEG, GIF, BMP, WebP, TIFF, ICO</p>
-                <input type="file" id="fileInput" accept="image/*">
+                <p class="drop-zone-text">Drop your image(s) here or click to browse</p>
+                <p class="drop-zone-hint">Supports PNG, JPG, JPEG, GIF, BMP, WebP, TIFF, ICO • Multiple files supported</p>
+                <input type="file" id="fileInput" accept="image/*" multiple aria-label="File input">
             </div>
 
-            <div class="preview-area" id="previewArea">
+            <div class="preview-area" id="previewArea" aria-live="polite">
                 <div class="preview-header">
                     <div class="preview-info">
                         <span class="file-badge" id="fileBadge">PNG</span>
                         <span class="file-size" id="fileSize">0 KB</span>
+                        <span class="dimension-badge" id="imageDimensions" aria-label="Image dimensions">
+                            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2" aria-hidden="true">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            </svg>
+                            <span id="dimensionText">0 × 0</span>
+                        </span>
                     </div>
-                    <button class="remove-btn" id="removeBtn">Remove</button>
+                    <button class="remove-btn" id="removeBtn" aria-label="Remove selected image">Remove</button>
                 </div>
                 <div class="preview-image-container">
-                    <img id="previewImage" src="" alt="Preview">
+                    <img id="previewImage" src="" alt="Preview of uploaded image">
+                </div>
+                
+                <!-- Image controls -->
+                <div class="image-controls" role="group" aria-label="Image transformation controls">
+                    <button class="control-btn" id="rotateLeftBtn" aria-label="Rotate image left 90 degrees" title="Rotate left (←)">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M2.5 2v6h6M2.66 15.57a10 10 0 1 0 .57-8.38"/>
+                        </svg>
+                        Rotate Left
+                    </button>
+                    <button class="control-btn" id="rotateRightBtn" aria-label="Rotate image right 90 degrees" title="Rotate right (→)">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/>
+                        </svg>
+                        Rotate Right
+                    </button>
+                    <button class="control-btn" id="flipHBtn" aria-label="Flip image horizontally" title="Flip horizontal (H)">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3"/>
+                            <path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/>
+                            <line x1="12" y1="20" x2="12" y2="4"/>
+                        </svg>
+                        Flip H
+                    </button>
+                    <button class="control-btn" id="flipVBtn" aria-label="Flip image vertically" title="Flip vertical (V)">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M3 8V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3"/>
+                            <path d="M3 16v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/>
+                            <line x1="4" y1="12" x2="20" y2="12"/>
+                        </svg>
+                        Flip V
+                    </button>
+                </div>
+
+                <!-- File list for multiple files -->
+                <div class="file-list" id="fileList" aria-label="Uploaded files list"></div>
+                <button class="add-more-btn" id="addMoreBtn" style="display: none;" aria-label="Add more images">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Add more images
+                </button>
+                <div class="batch-info" id="batchInfo" style="display: none;" aria-live="polite">
+                    <span id="batchCount">0</span> images selected • All will be converted to the selected format
                 </div>
             </div>
 
             <div class="format-section" id="formatSection" style="display: none;">
-                <label class="section-label">Convert to</label>
-                <div class="format-grid">
+                <label class="section-label" id="formatLabel">Convert to</label>
+                <div class="format-grid" role="radiogroup" aria-labelledby="formatLabel">
                     <div class="format-option">
                         <input type="radio" name="format" id="formatPng" value="png" checked>
                         <label for="formatPng">
@@ -677,29 +1364,74 @@
                     </div>
                 </div>
 
+                <!-- Resize section -->
+                <div class="resize-section">
+                    <label class="resize-toggle">
+                        <input type="checkbox" id="resizeToggle">
+                        <span class="toggle-switch"></span>
+                        <span class="section-label" style="margin: 0;">Resize image</span>
+                    </label>
+                    <div class="resize-inputs" id="resizeInputs">
+                        <div class="resize-field">
+                            <label for="resizeWidth">Width (px)</label>
+                            <input type="number" id="resizeWidth" min="1" max="10000" placeholder="Width" aria-label="Resize width in pixels">
+                        </div>
+                        <label class="aspect-ratio-lock" title="Lock aspect ratio">
+                            <input type="checkbox" id="aspectRatioLock" checked>
+                            <svg class="lock-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                            </svg>
+                            <span>Lock ratio</span>
+                        </label>
+                        <div class="resize-field">
+                            <label for="resizeHeight">Height (px)</label>
+                            <input type="number" id="resizeHeight" min="1" max="10000" placeholder="Height" aria-label="Resize height in pixels">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="quality-section" id="qualitySection">
                     <div class="quality-header">
                         <span class="section-label" style="margin: 0;">Quality</span>
                         <span class="quality-value" id="qualityValue">92%</span>
                     </div>
-                    <input type="range" class="quality-slider" id="qualitySlider" min="10" max="100" value="92">
+                    <input type="range" class="quality-slider" id="qualitySlider" min="10" max="100" value="92" aria-label="Image quality percentage">
                 </div>
 
-                <button class="convert-btn" id="convertBtn" disabled>
+                <!-- Filename customization -->
+                <div class="filename-section">
+                    <div class="filename-field">
+                        <label for="outputFilename">Output filename</label>
+                        <input type="text" id="outputFilename" placeholder="Enter filename (without extension)" aria-label="Custom output filename">
+                    </div>
+                </div>
+
+                <button class="convert-btn" id="convertBtn" disabled aria-label="Convert and download image">
                     Convert & Download
                 </button>
 
+                <div class="secondary-actions">
+                    <button class="secondary-btn" id="copyBtn" aria-label="Copy converted image to clipboard" title="Copy to clipboard (C)">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                        Copy to Clipboard
+                    </button>
+                </div>
+
                 <div class="progress-container" id="progressContainer">
-                    <div class="progress-bar">
+                    <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                         <div class="progress-fill" id="progressFill"></div>
                     </div>
-                    <p class="progress-text" id="progressText">Processing...</p>
+                    <p class="progress-text" id="progressText" aria-live="polite">Processing...</p>
                 </div>
             </div>
         </main>
 
         <footer>
-            <div class="supported-formats">
+            <div class="supported-formats" aria-label="Supported image formats">
                 <span class="format-tag">PNG</span>
                 <span class="format-tag">JPG</span>
                 <span class="format-tag">WebP</span>
@@ -707,11 +1439,11 @@
                 <span class="format-tag">BMP</span>
                 <span class="format-tag">ICO</span>
             </div>
-            <p class="footer-text">All conversions happen locally in your browser. No uploads.</p>
+            <p class="footer-text">All conversions happen locally in your browser. <strong>No uploads.</strong> Your privacy is protected.</p>
         </footer>
     </div>
 
-    <div class="toast" id="toast"></div>
+    <div class="toast" id="toast" role="alert" aria-live="assertive"></div>
 
     <script>
         // DOM Elements
@@ -731,8 +1463,160 @@
         const progressFill = document.getElementById('progressFill');
         const progressText = document.getElementById('progressText');
         const toast = document.getElementById('toast');
+        const themeToggle = document.getElementById('themeToggle');
+        const shortcutsBtn = document.getElementById('shortcutsBtn');
+        const shortcutsModal = document.getElementById('shortcutsModal');
+        const closeShortcuts = document.getElementById('closeShortcuts');
+        const dimensionText = document.getElementById('dimensionText');
+        const rotateLeftBtn = document.getElementById('rotateLeftBtn');
+        const rotateRightBtn = document.getElementById('rotateRightBtn');
+        const flipHBtn = document.getElementById('flipHBtn');
+        const flipVBtn = document.getElementById('flipVBtn');
+        const resizeToggle = document.getElementById('resizeToggle');
+        const resizeInputs = document.getElementById('resizeInputs');
+        const resizeWidth = document.getElementById('resizeWidth');
+        const resizeHeight = document.getElementById('resizeHeight');
+        const aspectRatioLock = document.getElementById('aspectRatioLock');
+        const outputFilename = document.getElementById('outputFilename');
+        const copyBtn = document.getElementById('copyBtn');
+        const fileList = document.getElementById('fileList');
+        const addMoreBtn = document.getElementById('addMoreBtn');
+        const batchInfo = document.getElementById('batchInfo');
+        const batchCount = document.getElementById('batchCount');
 
         let currentFile = null;
+        let currentFiles = [];
+        let originalWidth = 0;
+        let originalHeight = 0;
+        let aspectRatio = 1;
+        let rotation = 0;
+        let flipH = false;
+        let flipV = false;
+
+        // Initialize theme from localStorage or system preference
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        }
+        initTheme();
+
+        // Theme toggle handler
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+
+        // Shortcuts modal handlers
+        shortcutsBtn.addEventListener('click', () => {
+            shortcutsModal.classList.add('active');
+            shortcutsModal.querySelector('.modal-close').focus();
+        });
+
+        closeShortcuts.addEventListener('click', () => {
+            shortcutsModal.classList.remove('active');
+        });
+
+        shortcutsModal.addEventListener('click', (e) => {
+            if (e.target === shortcutsModal) {
+                shortcutsModal.classList.remove('active');
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Don't trigger shortcuts when typing in inputs
+            if (e.target.tagName === 'INPUT' && e.target.type !== 'checkbox' && e.target.type !== 'radio') {
+                if (e.key === 'Escape') {
+                    e.target.blur();
+                }
+                return;
+            }
+
+            // Escape to close modal
+            if (e.key === 'Escape') {
+                shortcutsModal.classList.remove('active');
+                return;
+            }
+
+            // ? for shortcuts modal (works on most keyboard layouts)
+            if (e.key === '?') {
+                e.preventDefault();
+                shortcutsModal.classList.add('active');
+                return;
+            }
+
+            // O for open file
+            if (e.key === 'o' || e.key === 'O') {
+                e.preventDefault();
+                fileInput.click();
+                return;
+            }
+
+            // T for theme toggle
+            if (e.key === 't' || e.key === 'T') {
+                e.preventDefault();
+                themeToggle.click();
+                return;
+            }
+
+            // Only if we have an image loaded
+            if (currentFile) {
+                // Enter for convert
+                if (e.key === 'Enter' && !convertBtn.disabled) {
+                    e.preventDefault();
+                    convertBtn.click();
+                    return;
+                }
+
+                // C for copy to clipboard (single key, not Ctrl/Cmd+C which is for native copy)
+                if ((e.key === 'c' || e.key === 'C') && !e.ctrlKey && !e.metaKey) {
+                    e.preventDefault();
+                    copyBtn.click();
+                    return;
+                }
+
+                // Delete/Backspace to remove
+                if (e.key === 'Delete' || e.key === 'Backspace') {
+                    e.preventDefault();
+                    removeBtn.click();
+                    return;
+                }
+
+                // Arrow keys for rotation
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    rotateLeftBtn.click();
+                    return;
+                }
+                if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    rotateRightBtn.click();
+                    return;
+                }
+
+                // H for flip horizontal
+                if (e.key === 'h' || e.key === 'H') {
+                    e.preventDefault();
+                    flipHBtn.click();
+                    return;
+                }
+
+                // V for flip vertical
+                if (e.key === 'v' || e.key === 'V') {
+                    e.preventDefault();
+                    flipVBtn.click();
+                    return;
+                }
+            }
+        });
 
         // Format change handler
         document.querySelectorAll('input[name="format"]').forEach(radio => {
@@ -751,8 +1635,40 @@
             qualityValue.textContent = e.target.value + '%';
         });
 
+        // Resize toggle handler
+        resizeToggle.addEventListener('change', () => {
+            if (resizeToggle.checked) {
+                resizeInputs.classList.add('active');
+                if (originalWidth && originalHeight) {
+                    resizeWidth.value = originalWidth;
+                    resizeHeight.value = originalHeight;
+                }
+            } else {
+                resizeInputs.classList.remove('active');
+            }
+        });
+
+        // Resize input handlers with aspect ratio lock
+        resizeWidth.addEventListener('input', () => {
+            if (aspectRatioLock.checked && resizeWidth.value && aspectRatio) {
+                resizeHeight.value = Math.round(resizeWidth.value / aspectRatio);
+            }
+        });
+
+        resizeHeight.addEventListener('input', () => {
+            if (aspectRatioLock.checked && resizeHeight.value && aspectRatio) {
+                resizeWidth.value = Math.round(resizeHeight.value * aspectRatio);
+            }
+        });
+
         // Drop zone handlers
         dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                fileInput.click();
+            }
+        });
 
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -766,51 +1682,156 @@
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
-            const files = e.dataTransfer.files;
+            const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
             if (files.length > 0) {
-                handleFile(files[0]);
+                handleFiles(files);
             }
         });
 
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
-                handleFile(e.target.files[0]);
+                handleFiles(Array.from(e.target.files));
             }
+        });
+
+        // Add more button handler
+        addMoreBtn.addEventListener('click', () => {
+            fileInput.click();
         });
 
         // Remove button handler
         removeBtn.addEventListener('click', () => {
             currentFile = null;
+            currentFiles = [];
             fileInput.value = '';
             previewArea.classList.remove('active');
             formatSection.style.display = 'none';
             convertBtn.disabled = true;
             dropZone.style.display = 'block';
+            fileList.innerHTML = '';
+            addMoreBtn.style.display = 'none';
+            batchInfo.style.display = 'none';
+            resetTransformations();
         });
 
-        // File handler
-        function handleFile(file) {
+        // Reset image transformations
+        function resetTransformations() {
+            rotation = 0;
+            flipH = false;
+            flipV = false;
+            updateImageTransform();
+        }
+
+        // Image transformation handlers
+        rotateLeftBtn.addEventListener('click', () => {
+            rotation = (rotation - 90) % 360;
+            updateImageTransform();
+        });
+
+        rotateRightBtn.addEventListener('click', () => {
+            rotation = (rotation + 90) % 360;
+            updateImageTransform();
+        });
+
+        flipHBtn.addEventListener('click', () => {
+            flipH = !flipH;
+            updateImageTransform();
+        });
+
+        flipVBtn.addEventListener('click', () => {
+            flipV = !flipV;
+            updateImageTransform();
+        });
+
+        function updateImageTransform() {
+            const transforms = [];
+            if (rotation !== 0) transforms.push(`rotate(${rotation}deg)`);
+            if (flipH) transforms.push('scaleX(-1)');
+            if (flipV) transforms.push('scaleY(-1)');
+            previewImage.style.transform = transforms.join(' ');
+        }
+
+        // Supported image extensions for validation
+        const SUPPORTED_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'tiff', 'tif', 'ico', 'svg'];
+
+        // Validate file is an image by MIME type and extension
+        function isValidImageFile(file) {
+            // Check MIME type
             if (!file.type.startsWith('image/')) {
-                showToast('Please select a valid image file', true);
+                return false;
+            }
+            // Also validate extension as additional check
+            const extension = file.name.split('.').pop().toLowerCase();
+            return SUPPORTED_IMAGE_EXTENSIONS.includes(extension);
+        }
+
+        // Handle multiple files
+        function handleFiles(files) {
+            const validFiles = files.filter(file => isValidImageFile(file));
+            
+            if (validFiles.length === 0) {
+                showToast('Please select valid image files', true);
                 return;
             }
 
-            currentFile = file;
+            // Add to current files if we already have some
+            if (currentFiles.length > 0) {
+                currentFiles = [...currentFiles, ...validFiles];
+            } else {
+                currentFiles = validFiles;
+            }
+
+            // Set the first file as current for preview
+            currentFile = currentFiles[0];
+            
+            // Handle single file vs multiple files display
+            if (currentFiles.length === 1) {
+                handleSingleFile(currentFile);
+            } else {
+                handleMultipleFiles(currentFiles);
+            }
+        }
+
+        // Handle single file
+        function handleSingleFile(file) {
             const reader = new FileReader();
 
             reader.onload = (e) => {
                 previewImage.src = e.target.result;
+                
+                // Get image dimensions
+                const img = new Image();
+                img.onload = () => {
+                    originalWidth = img.naturalWidth;
+                    originalHeight = img.naturalHeight;
+                    aspectRatio = originalWidth / originalHeight;
+                    dimensionText.textContent = `${originalWidth} × ${originalHeight}`;
+                    
+                    // Update resize inputs if active
+                    if (resizeToggle.checked) {
+                        resizeWidth.value = originalWidth;
+                        resizeHeight.value = originalHeight;
+                    }
+                };
+                img.src = e.target.result;
                 
                 // Update file info
                 const ext = file.name.split('.').pop().toUpperCase();
                 fileBadge.textContent = ext;
                 fileSize.textContent = formatFileSize(file.size);
 
+                // Set default output filename
+                outputFilename.value = file.name.replace(/\.[^/.]+$/, '');
+
                 // Show preview and format options
                 dropZone.style.display = 'none';
                 previewArea.classList.add('active');
                 formatSection.style.display = 'block';
                 convertBtn.disabled = false;
+                fileList.innerHTML = '';
+                addMoreBtn.style.display = 'block';
+                batchInfo.style.display = 'none';
+                resetTransformations();
             };
 
             reader.onerror = () => {
@@ -818,6 +1839,73 @@
             };
 
             reader.readAsDataURL(file);
+        }
+
+        // Handle multiple files
+        function handleMultipleFiles(files) {
+            // Show first file in preview
+            handleSingleFile(files[0]);
+            
+            // Build file list
+            fileList.innerHTML = '';
+            files.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const item = document.createElement('div');
+                    item.className = 'file-item';
+                    item.innerHTML = `
+                        <img src="${e.target.result}" alt="${file.name}" class="file-item-thumb">
+                        <div class="file-item-info">
+                            <div class="file-item-name">${file.name}</div>
+                            <div class="file-item-size">${formatFileSize(file.size)}</div>
+                        </div>
+                        <button class="file-item-remove" data-index="${index}" aria-label="Remove ${file.name}">
+                            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                    `;
+                    fileList.appendChild(item);
+
+                    // Add click handler to preview this file
+                    item.querySelector('.file-item-thumb').addEventListener('click', () => {
+                        currentFile = file;
+                        previewImage.src = e.target.result;
+                        
+                        const img = new Image();
+                        img.onload = () => {
+                            originalWidth = img.naturalWidth;
+                            originalHeight = img.naturalHeight;
+                            aspectRatio = originalWidth / originalHeight;
+                            dimensionText.textContent = `${originalWidth} × ${originalHeight}`;
+                        };
+                        img.src = e.target.result;
+                        
+                        const ext = file.name.split('.').pop().toUpperCase();
+                        fileBadge.textContent = ext;
+                        fileSize.textContent = formatFileSize(file.size);
+                        outputFilename.value = file.name.replace(/\.[^/.]+$/, '');
+                        resetTransformations();
+                    });
+
+                    // Add remove handler
+                    item.querySelector('.file-item-remove').addEventListener('click', (ev) => {
+                        ev.stopPropagation();
+                        const idx = parseInt(ev.currentTarget.dataset.index);
+                        currentFiles.splice(idx, 1);
+                        
+                        if (currentFiles.length === 0) {
+                            removeBtn.click();
+                        } else {
+                            handleMultipleFiles(currentFiles);
+                        }
+                    });
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // Update batch info
+            batchCount.textContent = files.length;
+            batchInfo.style.display = 'block';
+            addMoreBtn.style.display = 'block';
         }
 
         // Format file size
@@ -829,9 +1917,93 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
+        // Apply transformations to canvas
+        function applyTransformations(ctx, img, width, height) {
+            ctx.save();
+            ctx.translate(width / 2, height / 2);
+            
+            if (rotation !== 0) {
+                ctx.rotate(rotation * Math.PI / 180);
+            }
+            
+            let scaleX = 1;
+            let scaleY = 1;
+            if (flipH) scaleX = -1;
+            if (flipV) scaleY = -1;
+            ctx.scale(scaleX, scaleY);
+            
+            // Adjust dimensions for 90/270 degree rotations
+            const isRotated90 = Math.abs(rotation) === 90 || Math.abs(rotation) === 270;
+            const drawWidth = isRotated90 ? height : width;
+            const drawHeight = isRotated90 ? width : height;
+            
+            ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+            ctx.restore();
+        }
+
+        // Process single image
+        async function processImage(file, format, quality) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const img = new Image();
+                    img.crossOrigin = 'Anonymous';
+                    
+                    img.onload = () => {
+                        let targetWidth = img.naturalWidth;
+                        let targetHeight = img.naturalHeight;
+
+                        // Apply resize if enabled
+                        if (resizeToggle.checked && resizeWidth.value && resizeHeight.value) {
+                            targetWidth = parseInt(resizeWidth.value);
+                            targetHeight = parseInt(resizeHeight.value);
+                        }
+
+                        // Swap dimensions for 90/270 degree rotations
+                        const isRotated90 = Math.abs(rotation) === 90 || Math.abs(rotation) === 270;
+                        const canvasWidth = isRotated90 ? targetHeight : targetWidth;
+                        const canvasHeight = isRotated90 ? targetWidth : targetHeight;
+
+                        const canvas = document.createElement('canvas');
+                        
+                        // Special handling for ICO (32x32)
+                        if (format === 'ico') {
+                            canvas.width = 32;
+                            canvas.height = 32;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, 32, 32);
+                        } else {
+                            canvas.width = canvasWidth;
+                            canvas.height = canvasHeight;
+                            const ctx = canvas.getContext('2d');
+                            
+                            // Apply transformations
+                            if (rotation !== 0 || flipH || flipV) {
+                                applyTransformations(ctx, img, canvasWidth, canvasHeight);
+                            } else {
+                                ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+                            }
+                        }
+
+                        let mimeType = `image/${format}`;
+                        if (format === 'ico') mimeType = 'image/png';
+
+                        canvas.toBlob((blob) => {
+                            resolve(blob);
+                        }, mimeType, format === 'jpeg' || format === 'webp' ? quality : undefined);
+                    };
+
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
         // Convert button handler
         convertBtn.addEventListener('click', async () => {
-            if (!currentFile) return;
+            if (currentFiles.length === 0) return;
 
             const selectedFormat = document.querySelector('input[name="format"]:checked').value;
             const quality = qualitySlider.value / 100;
@@ -840,76 +2012,65 @@
             convertBtn.disabled = true;
             progressContainer.classList.add('active');
             progressFill.style.width = '0%';
-            progressText.textContent = 'Loading image...';
 
             try {
-                // Simulate progress
-                await animateProgress(30, 'Processing...');
+                if (currentFiles.length === 1) {
+                    // Single file conversion
+                    await animateProgress(30, 'Processing image...');
+                    
+                    const blob = await processImage(currentFile, selectedFormat, quality);
+                    
+                    await animateProgress(70, 'Encoding...');
 
-                // Create canvas for conversion
-                const img = new Image();
-                img.crossOrigin = 'Anonymous';
-                
-                await new Promise((resolve, reject) => {
-                    img.onload = resolve;
-                    img.onerror = reject;
-                    img.src = previewImage.src;
-                });
+                    // Download
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    const filename = outputFilename.value || currentFile.name.replace(/\.[^/.]+$/, '');
+                    const extension = selectedFormat === 'jpeg' ? 'jpg' : selectedFormat;
+                    a.href = url;
+                    a.download = `${filename}.${extension}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
 
-                await animateProgress(50, 'Converting...');
-
-                const canvas = document.createElement('canvas');
-                canvas.width = img.naturalWidth;
-                canvas.height = img.naturalHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
-
-                await animateProgress(70, 'Encoding...');
-
-                let mimeType = `image/${selectedFormat}`;
-                let extension = selectedFormat;
-
-                // Special handling for ICO (we'll create a 32x32 PNG for ICO)
-                if (selectedFormat === 'ico') {
-                    const icoCanvas = document.createElement('canvas');
-                    icoCanvas.width = 32;
-                    icoCanvas.height = 32;
-                    const icoCtx = icoCanvas.getContext('2d');
-                    icoCtx.drawImage(img, 0, 0, 32, 32);
-                    mimeType = 'image/png';
-                    canvas.width = 32;
-                    canvas.height = 32;
-                    ctx.drawImage(img, 0, 0, 32, 32);
-                }
-
-                // Convert to blob
-                const blob = await new Promise((resolve) => {
-                    if (selectedFormat === 'jpeg' || selectedFormat === 'webp') {
-                        canvas.toBlob(resolve, mimeType, quality);
-                    } else {
-                        canvas.toBlob(resolve, mimeType);
+                    await animateProgress(100, 'Complete!');
+                    showToast('Image converted successfully!');
+                } else {
+                    // Batch conversion - download as zip or individual files
+                    const total = currentFiles.length;
+                    
+                    for (let i = 0; i < currentFiles.length; i++) {
+                        const file = currentFiles[i];
+                        const progress = Math.round((i / total) * 80) + 10;
+                        await animateProgress(progress, `Converting ${i + 1} of ${total}...`);
+                        
+                        const blob = await processImage(file, selectedFormat, quality);
+                        
+                        // Download each file
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        const filename = file.name.replace(/\.[^/.]+$/, '');
+                        const extension = selectedFormat === 'jpeg' ? 'jpg' : selectedFormat;
+                        a.href = url;
+                        a.download = `${filename}.${extension}`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        
+                        // Delay between downloads to prevent browser blocking
+                        const BATCH_DOWNLOAD_DELAY_MS = 200;
+                        await new Promise(r => setTimeout(r, BATCH_DOWNLOAD_DELAY_MS));
                     }
-                });
 
-                await animateProgress(90, 'Preparing download...');
-
-                // Download
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                const originalName = currentFile.name.replace(/\.[^/.]+$/, '');
-                a.href = url;
-                a.download = `${originalName}.${extension}`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-                await animateProgress(100, 'Complete!');
+                    await animateProgress(100, 'All images converted!');
+                    showToast(`${total} images converted successfully!`);
+                }
 
                 setTimeout(() => {
                     progressContainer.classList.remove('active');
                     convertBtn.disabled = false;
-                    showToast('Image converted successfully!');
                 }, 500);
 
             } catch (error) {
@@ -920,11 +2081,42 @@
             }
         });
 
+        // Copy to clipboard handler
+        copyBtn.addEventListener('click', async () => {
+            if (!currentFile) return;
+
+            try {
+                const selectedFormat = document.querySelector('input[name="format"]:checked').value;
+                const quality = qualitySlider.value / 100;
+                
+                // Only PNG is widely supported for clipboard
+                const format = 'png';
+                const blob = await processImage(currentFile, format, quality);
+
+                await navigator.clipboard.write([
+                    new ClipboardItem({
+                        'image/png': blob
+                    })
+                ]);
+
+                showToast('Image copied to clipboard!');
+            } catch (error) {
+                console.error('Copy error:', error);
+                // Fallback message
+                if (error.name === 'NotAllowedError') {
+                    showToast('Clipboard access denied. Please allow clipboard permissions.', true);
+                } else {
+                    showToast('Unable to copy to clipboard. Try downloading instead.', true);
+                }
+            }
+        });
+
         // Animate progress
         function animateProgress(target, text) {
             return new Promise((resolve) => {
                 progressText.textContent = text;
                 progressFill.style.width = target + '%';
+                document.querySelector('.progress-bar').setAttribute('aria-valuenow', target);
                 setTimeout(resolve, 300);
             });
         }
