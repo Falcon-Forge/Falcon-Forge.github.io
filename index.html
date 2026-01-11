@@ -1546,8 +1546,8 @@
                 return;
             }
 
-            // ? for shortcuts modal
-            if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+            // ? for shortcuts modal (works on most keyboard layouts)
+            if (e.key === '?') {
                 e.preventDefault();
                 shortcutsModal.classList.add('active');
                 return;
@@ -1576,7 +1576,7 @@
                     return;
                 }
 
-                // C for copy to clipboard
+                // C for copy to clipboard (single key, not Ctrl/Cmd+C which is for native copy)
                 if ((e.key === 'c' || e.key === 'C') && !e.ctrlKey && !e.metaKey) {
                     e.preventDefault();
                     copyBtn.click();
@@ -1751,9 +1751,23 @@
             previewImage.style.transform = transforms.join(' ');
         }
 
+        // Supported image extensions for validation
+        const SUPPORTED_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'tiff', 'tif', 'ico', 'svg'];
+
+        // Validate file is an image by MIME type and extension
+        function isValidImageFile(file) {
+            // Check MIME type
+            if (!file.type.startsWith('image/')) {
+                return false;
+            }
+            // Also validate extension as additional check
+            const extension = file.name.split('.').pop().toLowerCase();
+            return SUPPORTED_IMAGE_EXTENSIONS.includes(extension);
+        }
+
         // Handle multiple files
         function handleFiles(files) {
-            const validFiles = files.filter(file => file.type.startsWith('image/'));
+            const validFiles = files.filter(file => isValidImageFile(file));
             
             if (validFiles.length === 0) {
                 showToast('Please select valid image files', true);
@@ -2045,8 +2059,9 @@
                         document.body.removeChild(a);
                         URL.revokeObjectURL(url);
                         
-                        // Small delay between downloads
-                        await new Promise(r => setTimeout(r, 200));
+                        // Delay between downloads to prevent browser blocking
+                        const BATCH_DOWNLOAD_DELAY_MS = 200;
+                        await new Promise(r => setTimeout(r, BATCH_DOWNLOAD_DELAY_MS));
                     }
 
                     await animateProgress(100, 'All images converted!');
@@ -2120,12 +2135,6 @@
         // Prevent default drag behavior on window
         window.addEventListener('dragover', (e) => e.preventDefault());
         window.addEventListener('drop', (e) => e.preventDefault());
-
-        // Service worker registration for PWA support (optional enhancement)
-        if ('serviceWorker' in navigator) {
-            // Can be enabled if a service worker file is added
-            // navigator.serviceWorker.register('/sw.js');
-        }
     </script>
 </body>
 </html>
