@@ -2022,12 +2022,16 @@
 
         // Handle multiple files
         function handleMultipleFiles(files) {
-            // Build file list first (before calling handleSingleFile)
+            // Build file list first
             fileList.innerHTML = '';
             batchCount.textContent = files.length;
             batchInfo.style.display = 'block';
             addMoreBtn.style.display = 'block';
             
+            // Setup preview for the first file
+            setupPreviewForFile(files[0], true);
+            
+            // Build thumbnail list for all files
             files.forEach((file, index) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -2047,25 +2051,7 @@
 
                     // Add click handler to preview this file
                     item.querySelector('.file-item-thumb').addEventListener('click', () => {
-                        currentFile = file;
-                        previewImage.src = e.target.result;
-                        
-                        const img = new Image();
-                        img.onload = () => {
-                            originalWidth = img.naturalWidth;
-                            originalHeight = img.naturalHeight;
-                            aspectRatio = originalWidth / originalHeight;
-                            dimensionText.textContent = `${originalWidth} × ${originalHeight}`;
-                        };
-                        img.src = e.target.result;
-                        
-                        const ext = file.name.split('.').pop().toUpperCase();
-                        fileBadge.textContent = ext;
-                        fileSize.textContent = formatFileSize(file.size);
-                        originalFileSize = file.size;
-                        outputFilename.value = file.name.replace(/\.[^/.]+$/, '');
-                        resetTransformations();
-                        updateSizeEstimate();
+                        setupPreviewForFile(file, false, e.target.result);
                     });
 
                     // Add remove handler
@@ -2085,12 +2071,14 @@
                 };
                 reader.readAsDataURL(file);
             });
+        }
+        
+        // Shared function to setup preview for a file
+        function setupPreviewForFile(file, showUI, cachedDataUrl) {
+            currentFile = file;
             
-            // Show first file in preview (inline version, not calling handleSingleFile)
-            const firstFile = files[0];
-            const firstReader = new FileReader();
-            firstReader.onload = (e) => {
-                previewImage.src = e.target.result;
+            const loadPreview = (dataUrl) => {
+                previewImage.src = dataUrl;
                 
                 const img = new Image();
                 img.onload = () => {
@@ -2104,22 +2092,32 @@
                         resizeHeight.value = originalHeight;
                     }
                 };
-                img.src = e.target.result;
+                img.src = dataUrl;
                 
-                const ext = firstFile.name.split('.').pop().toUpperCase();
+                const ext = file.name.split('.').pop().toUpperCase();
                 fileBadge.textContent = ext;
-                fileSize.textContent = formatFileSize(firstFile.size);
-                originalFileSize = firstFile.size;
-                outputFilename.value = firstFile.name.replace(/\.[^/.]+$/, '');
+                fileSize.textContent = formatFileSize(file.size);
+                originalFileSize = file.size;
+                outputFilename.value = file.name.replace(/\.[^/.]+$/, '');
                 
-                dropZone.style.display = 'none';
-                previewArea.classList.add('active');
-                formatSection.style.display = 'block';
-                convertBtn.disabled = false;
+                if (showUI) {
+                    dropZone.style.display = 'none';
+                    previewArea.classList.add('active');
+                    formatSection.style.display = 'block';
+                    convertBtn.disabled = false;
+                }
+                
                 resetTransformations();
                 updateSizeEstimate();
             };
-            firstReader.readAsDataURL(firstFile);
+            
+            if (cachedDataUrl) {
+                loadPreview(cachedDataUrl);
+            } else {
+                const reader = new FileReader();
+                reader.onload = (e) => loadPreview(e.target.result);
+                reader.readAsDataURL(file);
+            }
         }
 
         // Format file size
@@ -2233,6 +2231,11 @@
             });
         }
 
+        // Compression constants
+        const COMPRESSION_MAX_ITERATIONS = 10;
+        const COMPRESSION_QUALITY_THRESHOLD = 0.01;
+        const COMPRESSION_TARGET_TOLERANCE = 0.8;
+
         // Compress image to target file size using binary search
         async function compressToTargetSize(canvas, mimeType, initialQuality, targetBytes) {
             return new Promise((resolve) => {
@@ -2240,19 +2243,21 @@
                 let maxQuality = initialQuality;
                 let bestBlob = null;
                 let iterations = 0;
-                const maxIterations = 10;
 
                 function tryQuality(quality) {
                     canvas.toBlob((blob) => {
                         iterations++;
                         
-                        if (!bestBlob || (blob.size <= targetBytes && blob.size > (bestBlob.size <= targetBytes ? bestBlob.size : 0))) {
+                        // Update best blob if this one is better (under target but larger than previous best under target)
+                        const isBlobUnderTarget = blob.size <= targetBytes;
+                        const bestBlobSize = bestBlob && bestBlob.size <= targetBytes ? bestBlob.size : 0;
+                        if (!bestBlob || (isBlobUnderTarget && blob.size > bestBlobSize)) {
                             bestBlob = blob;
                         }
                         
                         // If we're close enough or max iterations reached, use best result
-                        if (iterations >= maxIterations || 
-                            (blob.size <= targetBytes && blob.size >= targetBytes * 0.8)) {
+                        const isCloseEnough = isBlobUnderTarget && blob.size >= targetBytes * COMPRESSION_TARGET_TOLERANCE;
+                        if (iterations >= COMPRESSION_MAX_ITERATIONS || isCloseEnough) {
                             resolve(bestBlob || blob);
                             return;
                         }
@@ -2267,7 +2272,7 @@
                         const nextQuality = (minQuality + maxQuality) / 2;
                         
                         // If quality range is too small, stop
-                        if (maxQuality - minQuality < 0.01) {
+                        if (maxQuality - minQuality < COMPRESSION_QUALITY_THRESHOLD) {
                             resolve(bestBlob || blob);
                             return;
                         }
