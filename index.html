@@ -14,8 +14,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <!-- jsPDF for document to PDF conversion -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- FFmpeg for video/audio conversion -->
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.min.js"></script>
     <style>
         :root {
             --bg-dark: #0a0a0f;
@@ -1859,13 +1857,6 @@
                             <span class="format-desc">Icon</span>
                         </label>
                     </div>
-                    <div class="format-option">
-                        <input type="radio" name="format" id="formatTiff" value="tiff">
-                        <label for="formatTiff">
-                            <span class="format-name">TIFF</span>
-                            <span class="format-desc">Print</span>
-                        </label>
-                    </div>
                 </div>
 
                 <!-- Resize section -->
@@ -2078,13 +2069,12 @@
                         </svg>
                     </div>
                     <p class="drop-zone-text">Drop your video here or click to browse</p>
-                    <p class="drop-zone-hint">Supports MP4, WebM, MOV, AVI • Convert to MP4, WebM, GIF</p>
+                    <p class="drop-zone-hint">Supports MP4, WebM, MOV, AVI • Convert to MP4, WebM</p>
                     <div class="file-type-tags">
                         <span class="file-type-tag">MP4</span>
                         <span class="file-type-tag">WebM</span>
                         <span class="file-type-tag">MOV</span>
                         <span class="file-type-tag">AVI</span>
-                        <span class="file-type-tag">GIF</span>
                     </div>
                     <input type="file" id="videoFileInput" accept="video/*,.mp4,.webm,.mov,.avi,.mkv" aria-label="Video file input">
                 </div>
@@ -2121,13 +2111,6 @@
                                 <label for="videoFormatWebm">
                                     <span class="format-name">WebM</span>
                                     <span class="format-desc">Web Video</span>
-                                </label>
-                            </div>
-                            <div class="conversion-option">
-                                <input type="radio" name="videoFormat" id="videoFormatGif" value="gif">
-                                <label for="videoFormatGif">
-                                    <span class="format-name">GIF</span>
-                                    <span class="format-desc">Animated</span>
                                 </label>
                             </div>
                         </div>
@@ -3043,7 +3026,6 @@
                         let mimeType = `image/${format}`;
                         if (format === 'ico') mimeType = 'image/png';
                         if (format === 'avif') mimeType = 'image/avif';
-                        if (format === 'tiff') mimeType = 'image/png'; // Fallback, as tiff isn't supported by canvas
 
                         // Check if format is supported by canvas
                         const supportsFormat = (fmt) => {
@@ -3631,13 +3613,7 @@ ${escaped}
             videoProgressText.textContent = 'Preparing video...';
 
             try {
-                let blob;
-                
-                if (targetFormat === 'gif') {
-                    blob = await convertVideoToGif(currentVideoFile, resolution);
-                } else {
-                    blob = await convertVideoFormat(currentVideoFile, targetFormat, resolution);
-                }
+                const blob = await convertVideoFormat(currentVideoFile, targetFormat, resolution);
 
                 videoProgressFill.style.width = '100%';
                 videoProgressText.textContent = 'Complete!';
@@ -3726,69 +3702,6 @@ ${escaped}
                     };
                     
                     drawFrame();
-                };
-                
-                video.onerror = reject;
-            });
-        }
-
-        async function convertVideoToGif(file, resolution) {
-            return new Promise((resolve, reject) => {
-                const video = document.createElement('video');
-                video.src = URL.createObjectURL(file);
-                video.muted = true;
-                
-                video.onloadedmetadata = async () => {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    
-                    let width = video.videoWidth;
-                    let height = video.videoHeight;
-                    
-                    // Limit GIF size
-                    const maxSize = resolution !== 'original' ? parseInt(resolution) : 480;
-                    if (height > maxSize) {
-                        const scale = maxSize / height;
-                        width = Math.round(width * scale);
-                        height = maxSize;
-                    }
-                    
-                    canvas.width = width;
-                    canvas.height = height;
-                    
-                    const frames = [];
-                    const fps = 10;
-                    const duration = Math.min(video.duration, 10); // Max 10 seconds for GIF
-                    const frameCount = Math.floor(duration * fps);
-                    
-                    video.currentTime = 0;
-                    
-                    const captureFrame = (frameIndex) => {
-                        return new Promise((resolveFrame) => {
-                            video.onseeked = () => {
-                                ctx.drawImage(video, 0, 0, width, height);
-                                frames.push(canvas.toDataURL('image/png'));
-                                videoProgressFill.style.width = `${(frameIndex / frameCount) * 80 + 10}%`;
-                                resolveFrame();
-                            };
-                            video.currentTime = frameIndex / fps;
-                        });
-                    };
-                    
-                    for (let i = 0; i < frameCount; i++) {
-                        await captureFrame(i);
-                    }
-                    
-                    videoProgressText.textContent = 'Creating GIF...';
-                    
-                    // Create animated GIF using a simple approach (convert first frame for now)
-                    // For full GIF animation, you'd need gif.js library
-                    const response = await fetch(frames[0]);
-                    const blob = await response.blob();
-                    
-                    // Note: Full GIF animation would require additional library
-                    showToast('Note: Animated GIF creation requires additional processing. Downloaded first frame as image.', false);
-                    resolve(blob);
                 };
                 
                 video.onerror = reject;
@@ -4227,8 +4140,8 @@ ${escaped}
                             downloadCount++;
                             archiveProgressFill.style.width = `${(downloadCount / files.length) * 90 + 10}%`;
                             
-                            // Delay between downloads
-                            await new Promise(r => setTimeout(r, 200));
+                            // Small delay between downloads to prevent browser blocking
+                            await new Promise(r => setTimeout(r, 50));
                         }
                     }
                     
