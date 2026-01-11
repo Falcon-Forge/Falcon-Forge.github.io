@@ -781,6 +781,94 @@
             border-radius: 12px;
         }
 
+        /* Compression section */
+        .compression-section {
+            margin-top: 15px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+        }
+
+        .compression-inputs {
+            display: none;
+            gap: 15px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .compression-inputs.active {
+            display: flex;
+        }
+
+        .compression-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .compression-field label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .compression-field input,
+        .compression-field select {
+            width: 140px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .compression-field input:focus,
+        .compression-field select:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        .compression-field select option {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .size-estimate {
+            margin-top: 15px;
+            padding: 12px 16px;
+            background: rgba(254, 228, 64, 0.1);
+            border: 1px solid var(--accent-yellow);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: var(--accent-yellow);
+            display: none;
+        }
+
+        .size-estimate.active {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .size-estimate svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            flex-shrink: 0;
+        }
+
+        .compression-hint {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: 10px;
+        }
+
         .resize-toggle {
             display: flex;
             align-items: center;
@@ -1313,7 +1401,7 @@
                     Add more images
                 </button>
                 <div class="batch-info" id="batchInfo" style="display: none;" aria-live="polite">
-                    <span id="batchCount">0</span> images selected • All will be converted to the selected format
+                    <span id="batchCount">0</span> images selected • All will be converted with the same settings
                 </div>
             </div>
 
@@ -1389,6 +1477,34 @@
                             <input type="number" id="resizeHeight" min="1" max="10000" placeholder="Height" aria-label="Resize height in pixels">
                         </div>
                     </div>
+                </div>
+
+                <!-- Compression/File size reduction section -->
+                <div class="compression-section">
+                    <label class="resize-toggle">
+                        <input type="checkbox" id="compressionToggle">
+                        <span class="toggle-switch"></span>
+                        <span class="section-label" style="margin: 0;">Reduce file size</span>
+                    </label>
+                    <div class="compression-inputs" id="compressionInputs">
+                        <div class="compression-field">
+                            <label for="targetSize">Target size (KB)</label>
+                            <input type="number" id="targetSize" min="10" max="10000" placeholder="e.g. 500" aria-label="Target file size in kilobytes">
+                        </div>
+                        <div class="compression-field">
+                            <label for="maxDimension">Max dimension (px)</label>
+                            <input type="number" id="maxDimension" min="100" max="10000" placeholder="e.g. 1920" aria-label="Maximum width or height in pixels">
+                        </div>
+                    </div>
+                    <div class="size-estimate" id="sizeEstimate">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="16" x2="12" y2="12"/>
+                            <line x1="12" y1="8" x2="12.01" y2="8"/>
+                        </svg>
+                        <span id="sizeEstimateText">Estimated output size will be shown here</span>
+                    </div>
+                    <p class="compression-hint">Note: Compression works best with JPEG and WebP formats. Very low target sizes may reduce image quality.</p>
                 </div>
 
                 <div class="quality-section" id="qualitySection">
@@ -1483,6 +1599,12 @@
         const addMoreBtn = document.getElementById('addMoreBtn');
         const batchInfo = document.getElementById('batchInfo');
         const batchCount = document.getElementById('batchCount');
+        const compressionToggle = document.getElementById('compressionToggle');
+        const compressionInputs = document.getElementById('compressionInputs');
+        const targetSize = document.getElementById('targetSize');
+        const maxDimension = document.getElementById('maxDimension');
+        const sizeEstimate = document.getElementById('sizeEstimate');
+        const sizeEstimateText = document.getElementById('sizeEstimateText');
 
         let currentFile = null;
         let currentFiles = [];
@@ -1492,6 +1614,7 @@
         let rotation = 0;
         let flipH = false;
         let flipV = false;
+        let originalFileSize = 0;
 
         // Initialize theme from localStorage or system preference
         function initTheme() {
@@ -1661,6 +1784,58 @@
             }
         });
 
+        // Compression toggle handler
+        compressionToggle.addEventListener('change', () => {
+            if (compressionToggle.checked) {
+                compressionInputs.classList.add('active');
+                updateSizeEstimate();
+            } else {
+                compressionInputs.classList.remove('active');
+                sizeEstimate.classList.remove('active');
+            }
+        });
+
+        // Compression input handlers
+        targetSize.addEventListener('input', updateSizeEstimate);
+        maxDimension.addEventListener('input', updateSizeEstimate);
+
+        // Update size estimate
+        function updateSizeEstimate() {
+            if (!compressionToggle.checked || !currentFile) {
+                sizeEstimate.classList.remove('active');
+                return;
+            }
+            
+            const target = parseInt(targetSize.value) || 0;
+            const maxDim = parseInt(maxDimension.value) || 0;
+            
+            if (target > 0 || maxDim > 0) {
+                sizeEstimate.classList.add('active');
+                let estimateMessage = '';
+                
+                if (target > 0) {
+                    const currentSizeKB = Math.round(originalFileSize / 1024);
+                    if (currentSizeKB > target) {
+                        estimateMessage = `Will compress from ~${currentSizeKB}KB to target ~${target}KB`;
+                    } else {
+                        estimateMessage = `Current size (~${currentSizeKB}KB) is already below target`;
+                    }
+                }
+                
+                if (maxDim > 0) {
+                    const maxOriginal = Math.max(originalWidth, originalHeight);
+                    if (maxOriginal > maxDim) {
+                        estimateMessage += estimateMessage ? '. ' : '';
+                        estimateMessage += `Will scale down from ${maxOriginal}px to ${maxDim}px max`;
+                    }
+                }
+                
+                sizeEstimateText.textContent = estimateMessage || 'Enter target size or max dimension';
+            } else {
+                sizeEstimate.classList.remove('active');
+            }
+        }
+
         // Drop zone handlers
         dropZone.addEventListener('click', () => fileInput.click());
         dropZone.addEventListener('keydown', (e) => {
@@ -1819,6 +1994,7 @@
                 const ext = file.name.split('.').pop().toUpperCase();
                 fileBadge.textContent = ext;
                 fileSize.textContent = formatFileSize(file.size);
+                originalFileSize = file.size;
 
                 // Set default output filename
                 outputFilename.value = file.name.replace(/\.[^/.]+$/, '');
@@ -1832,6 +2008,9 @@
                 addMoreBtn.style.display = 'block';
                 batchInfo.style.display = 'none';
                 resetTransformations();
+                
+                // Update size estimate if compression is enabled
+                updateSizeEstimate();
             };
 
             reader.onerror = () => {
@@ -1843,11 +2022,16 @@
 
         // Handle multiple files
         function handleMultipleFiles(files) {
-            // Show first file in preview
-            handleSingleFile(files[0]);
-            
-            // Build file list
+            // Build file list first
             fileList.innerHTML = '';
+            batchCount.textContent = files.length;
+            batchInfo.style.display = 'block';
+            addMoreBtn.style.display = 'block';
+            
+            // Setup preview for the first file
+            setupPreviewForFile(files[0], true);
+            
+            // Build thumbnail list for all files
             files.forEach((file, index) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -1867,23 +2051,7 @@
 
                     // Add click handler to preview this file
                     item.querySelector('.file-item-thumb').addEventListener('click', () => {
-                        currentFile = file;
-                        previewImage.src = e.target.result;
-                        
-                        const img = new Image();
-                        img.onload = () => {
-                            originalWidth = img.naturalWidth;
-                            originalHeight = img.naturalHeight;
-                            aspectRatio = originalWidth / originalHeight;
-                            dimensionText.textContent = `${originalWidth} × ${originalHeight}`;
-                        };
-                        img.src = e.target.result;
-                        
-                        const ext = file.name.split('.').pop().toUpperCase();
-                        fileBadge.textContent = ext;
-                        fileSize.textContent = formatFileSize(file.size);
-                        outputFilename.value = file.name.replace(/\.[^/.]+$/, '');
-                        resetTransformations();
+                        setupPreviewForFile(file, false, e.target.result);
                     });
 
                     // Add remove handler
@@ -1894,6 +2062,8 @@
                         
                         if (currentFiles.length === 0) {
                             removeBtn.click();
+                        } else if (currentFiles.length === 1) {
+                            handleSingleFile(currentFiles[0]);
                         } else {
                             handleMultipleFiles(currentFiles);
                         }
@@ -1901,11 +2071,53 @@
                 };
                 reader.readAsDataURL(file);
             });
-
-            // Update batch info
-            batchCount.textContent = files.length;
-            batchInfo.style.display = 'block';
-            addMoreBtn.style.display = 'block';
+        }
+        
+        // Shared function to setup preview for a file
+        function setupPreviewForFile(file, showUI, cachedDataUrl) {
+            currentFile = file;
+            
+            const loadPreview = (dataUrl) => {
+                previewImage.src = dataUrl;
+                
+                const img = new Image();
+                img.onload = () => {
+                    originalWidth = img.naturalWidth;
+                    originalHeight = img.naturalHeight;
+                    aspectRatio = originalWidth / originalHeight;
+                    dimensionText.textContent = `${originalWidth} × ${originalHeight}`;
+                    
+                    if (resizeToggle.checked) {
+                        resizeWidth.value = originalWidth;
+                        resizeHeight.value = originalHeight;
+                    }
+                };
+                img.src = dataUrl;
+                
+                const ext = file.name.split('.').pop().toUpperCase();
+                fileBadge.textContent = ext;
+                fileSize.textContent = formatFileSize(file.size);
+                originalFileSize = file.size;
+                outputFilename.value = file.name.replace(/\.[^/.]+$/, '');
+                
+                if (showUI) {
+                    dropZone.style.display = 'none';
+                    previewArea.classList.add('active');
+                    formatSection.style.display = 'block';
+                    convertBtn.disabled = false;
+                }
+                
+                resetTransformations();
+                updateSizeEstimate();
+            };
+            
+            if (cachedDataUrl) {
+                loadPreview(cachedDataUrl);
+            } else {
+                const reader = new FileReader();
+                reader.onload = (e) => loadPreview(e.target.result);
+                reader.readAsDataURL(file);
+            }
         }
 
         // Format file size
@@ -1949,7 +2161,7 @@
                     const img = new Image();
                     img.crossOrigin = 'Anonymous';
                     
-                    img.onload = () => {
+                    img.onload = async () => {
                         let targetWidth = img.naturalWidth;
                         let targetHeight = img.naturalHeight;
 
@@ -1957,6 +2169,17 @@
                         if (resizeToggle.checked && resizeWidth.value && resizeHeight.value) {
                             targetWidth = parseInt(resizeWidth.value);
                             targetHeight = parseInt(resizeHeight.value);
+                        }
+
+                        // Apply max dimension constraint from compression settings
+                        if (compressionToggle.checked && maxDimension.value) {
+                            const maxDim = parseInt(maxDimension.value);
+                            const currentMax = Math.max(targetWidth, targetHeight);
+                            if (currentMax > maxDim) {
+                                const scale = maxDim / currentMax;
+                                targetWidth = Math.round(targetWidth * scale);
+                                targetHeight = Math.round(targetHeight * scale);
+                            }
                         }
 
                         // Swap dimensions for 90/270 degree rotations
@@ -1988,9 +2211,16 @@
                         let mimeType = `image/${format}`;
                         if (format === 'ico') mimeType = 'image/png';
 
-                        canvas.toBlob((blob) => {
+                        // Apply compression to reach target size if enabled
+                        if (compressionToggle.checked && targetSize.value && (format === 'jpeg' || format === 'webp')) {
+                            const targetBytes = parseInt(targetSize.value) * 1024;
+                            const blob = await compressToTargetSize(canvas, mimeType, quality, targetBytes);
                             resolve(blob);
-                        }, mimeType, format === 'jpeg' || format === 'webp' ? quality : undefined);
+                        } else {
+                            canvas.toBlob((blob) => {
+                                resolve(blob);
+                            }, mimeType, format === 'jpeg' || format === 'webp' ? quality : undefined);
+                        }
                     };
 
                     img.onerror = reject;
@@ -1998,6 +2228,60 @@
                 };
                 reader.onerror = reject;
                 reader.readAsDataURL(file);
+            });
+        }
+
+        // Compression constants
+        const COMPRESSION_MAX_ITERATIONS = 10;
+        const COMPRESSION_QUALITY_THRESHOLD = 0.01;
+        const COMPRESSION_TARGET_TOLERANCE = 0.8;
+
+        // Compress image to target file size using binary search
+        async function compressToTargetSize(canvas, mimeType, initialQuality, targetBytes) {
+            return new Promise((resolve) => {
+                let minQuality = 0.1;
+                let maxQuality = initialQuality;
+                let bestBlob = null;
+                let iterations = 0;
+
+                function tryQuality(quality) {
+                    canvas.toBlob((blob) => {
+                        iterations++;
+                        
+                        // Update best blob if this one is better (under target but larger than previous best under target)
+                        const isBlobUnderTarget = blob.size <= targetBytes;
+                        const bestBlobSize = bestBlob && bestBlob.size <= targetBytes ? bestBlob.size : 0;
+                        if (!bestBlob || (isBlobUnderTarget && blob.size > bestBlobSize)) {
+                            bestBlob = blob;
+                        }
+                        
+                        // If we're close enough or max iterations reached, use best result
+                        const isCloseEnough = isBlobUnderTarget && blob.size >= targetBytes * COMPRESSION_TARGET_TOLERANCE;
+                        if (iterations >= COMPRESSION_MAX_ITERATIONS || isCloseEnough) {
+                            resolve(bestBlob || blob);
+                            return;
+                        }
+
+                        // Binary search for optimal quality
+                        if (blob.size > targetBytes) {
+                            maxQuality = quality;
+                        } else {
+                            minQuality = quality;
+                        }
+
+                        const nextQuality = (minQuality + maxQuality) / 2;
+                        
+                        // If quality range is too small, stop
+                        if (maxQuality - minQuality < COMPRESSION_QUALITY_THRESHOLD) {
+                            resolve(bestBlob || blob);
+                            return;
+                        }
+                        
+                        tryQuality(nextQuality);
+                    }, mimeType, quality);
+                }
+
+                tryQuality(maxQuality);
             });
         }
 
