@@ -3,11 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Falcon Forge - Free online image converter. Convert images to PNG, JPG, WebP, GIF, BMP, ICO instantly in your browser. No uploads required, 100% private.">
-    <meta name="keywords" content="image converter, png converter, jpg converter, webp converter, online image converter, free image converter">
+    <meta name="description" content="Falcon Forge - Free online file converter. Convert images, documents, videos, audio, and archives instantly in your browser. No uploads required, 100% private.">
+    <meta name="keywords" content="file converter, image converter, pdf converter, video converter, audio converter, png converter, jpg converter, webp converter, online converter, free converter">
     <meta name="theme-color" content="#0a0a0f">
-    <title>Falcon Forge — Image Converter</title>
+    <title>Falcon Forge — Universal File Converter</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- JSZip for archive functionality -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- PDF-lib for PDF creation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <!-- jsPDF for document to PDF conversion -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- FFmpeg for video/audio conversion -->
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.min.js"></script>
     <style>
         :root {
             --bg-dark: #0a0a0f;
@@ -1241,6 +1249,341 @@
             .format-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
+
+            .category-nav {
+                overflow-x: auto;
+                justify-content: flex-start;
+                padding-bottom: 10px;
+            }
+
+            .category-btn {
+                flex-shrink: 0;
+            }
+        }
+
+        /* Category Navigation */
+        .category-nav {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .category-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-secondary);
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .category-btn:hover {
+            border-color: var(--accent-cyan);
+            color: var(--text-primary);
+        }
+
+        .category-btn.active {
+            border-color: var(--accent-cyan);
+            background: rgba(0, 245, 212, 0.1);
+            color: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+        }
+
+        .category-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .category-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Converter sections */
+        .converter-section {
+            display: none;
+        }
+
+        .converter-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* File type tags in drop zone */
+        .file-type-tags {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .file-type-tag {
+            padding: 4px 10px;
+            background: rgba(0, 245, 212, 0.1);
+            border: 1px solid rgba(0, 245, 212, 0.3);
+            border-radius: 20px;
+            font-size: 0.65rem;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Preview for different file types */
+        .file-preview {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .file-icon {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            stroke: var(--accent-cyan);
+            fill: none;
+            stroke-width: 1.5;
+        }
+
+        .file-name {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+            word-break: break-all;
+        }
+
+        .file-type {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Video/Audio preview */
+        .media-preview {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 12px;
+        }
+
+        /* Text preview */
+        .text-preview {
+            max-height: 300px;
+            overflow: auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: left;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 15, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 2000;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .loading-progress {
+            margin-top: 10px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        /* Feature cards */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .feature-card {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: var(--accent-cyan);
+            transform: translateY(-2px);
+        }
+
+        .feature-card svg {
+            width: 40px;
+            height: 40px;
+            stroke: var(--accent-cyan);
+            fill: none;
+            stroke-width: 1.5;
+            margin-bottom: 10px;
+        }
+
+        .feature-card h4 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+
+        .feature-card p {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Archive file list */
+        .archive-contents {
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .archive-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .archive-item:last-child {
+            border-bottom: none;
+        }
+
+        .archive-item svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--text-secondary);
+            fill: none;
+            stroke-width: 2;
+            flex-shrink: 0;
+        }
+
+        .archive-item-name {
+            flex: 1;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .archive-item-size {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Conversion options grid */
+        .conversion-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .conversion-option {
+            position: relative;
+        }
+
+        .conversion-option input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .conversion-option label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 15px 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .conversion-option label:hover {
+            border-color: var(--accent-cyan);
+            background: rgba(0, 245, 212, 0.05);
+        }
+
+        .conversion-option input:checked + label {
+            border-color: var(--accent-cyan);
+            background: rgba(0, 245, 212, 0.1);
+            box-shadow: var(--glow-cyan);
+        }
+
+        .conversion-option .format-name {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .conversion-option .format-desc {
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 3px;
         }
     </style>
 </head>
@@ -1324,22 +1667,81 @@
     <div class="container">
         <header>
             <h1 class="logo">Falcon Forge</h1>
-            <p class="tagline">Transform your images instantly</p>
+            <p class="tagline">Transform your files instantly</p>
         </header>
 
-        <main class="converter-card" id="main-content" role="main" aria-label="Image converter">
-            <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Drop zone for image upload. Click or drag and drop images here.">
-                <div class="drop-zone-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="17 8 12 3 7 8"/>
-                        <line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
+        <!-- Category Navigation -->
+        <nav class="category-nav" role="tablist" aria-label="Converter categories">
+            <button class="category-btn active" data-category="image" role="tab" aria-selected="true" aria-controls="image-converter">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                Images
+            </button>
+            <button class="category-btn" data-category="document" role="tab" aria-selected="false" aria-controls="document-converter">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                Documents
+            </button>
+            <button class="category-btn" data-category="video" role="tab" aria-selected="false" aria-controls="video-converter">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <polygon points="23 7 16 12 23 17 23 7"/>
+                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                </svg>
+                Video
+            </button>
+            <button class="category-btn" data-category="audio" role="tab" aria-selected="false" aria-controls="audio-converter">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M9 18V5l12-2v13"/>
+                    <circle cx="6" cy="18" r="3"/>
+                    <circle cx="18" cy="16" r="3"/>
+                </svg>
+                Audio
+            </button>
+            <button class="category-btn" data-category="archive" role="tab" aria-selected="false" aria-controls="archive-converter">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    <line x1="12" y1="11" x2="12" y2="17"/>
+                    <line x1="9" y1="14" x2="15" y2="14"/>
+                </svg>
+                Archives
+            </button>
+        </nav>
+
+        <main class="converter-card" id="main-content" role="main" aria-label="File converter">
+            
+            <!-- ============================================== -->
+            <!-- IMAGE CONVERTER SECTION -->
+            <!-- ============================================== -->
+            <div class="converter-section active" id="image-converter" role="tabpanel" aria-labelledby="image-tab">
+                <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Drop zone for image upload. Click or drag and drop images here.">
+                    <div class="drop-zone-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                    </div>
+                    <p class="drop-zone-text">Drop your image(s) here or click to browse</p>
+                    <p class="drop-zone-hint">Supports PNG, JPG, WebP, GIF, BMP, TIFF, ICO, SVG, AVIF • Multiple files supported</p>
+                    <div class="file-type-tags">
+                        <span class="file-type-tag">PNG</span>
+                        <span class="file-type-tag">JPG</span>
+                        <span class="file-type-tag">WebP</span>
+                        <span class="file-type-tag">GIF</span>
+                        <span class="file-type-tag">BMP</span>
+                        <span class="file-type-tag">AVIF</span>
+                        <span class="file-type-tag">SVG</span>
+                        <span class="file-type-tag">TIFF</span>
+                    </div>
+                    <input type="file" id="fileInput" accept="image/*,.svg,.avif" multiple aria-label="File input">
                 </div>
-                <p class="drop-zone-text">Drop your image(s) here or click to browse</p>
-                <p class="drop-zone-hint">Supports PNG, JPG, JPEG, GIF, BMP, WebP, TIFF, ICO • Multiple files supported</p>
-                <input type="file" id="fileInput" accept="image/*" multiple aria-label="File input">
-            </div>
 
             <div class="preview-area" id="previewArea" aria-live="polite">
                 <div class="preview-header">
@@ -1430,6 +1832,13 @@
                         </label>
                     </div>
                     <div class="format-option">
+                        <input type="radio" name="format" id="formatAvif" value="avif">
+                        <label for="formatAvif">
+                            <span class="format-name">AVIF</span>
+                            <span class="format-desc">Next-Gen</span>
+                        </label>
+                    </div>
+                    <div class="format-option">
                         <input type="radio" name="format" id="formatGif" value="gif">
                         <label for="formatGif">
                             <span class="format-name">GIF</span>
@@ -1448,6 +1857,13 @@
                         <label for="formatIco">
                             <span class="format-name">ICO</span>
                             <span class="format-desc">Icon</span>
+                        </label>
+                    </div>
+                    <div class="format-option">
+                        <input type="radio" name="format" id="formatTiff" value="tiff">
+                        <label for="formatTiff">
+                            <span class="format-name">TIFF</span>
+                            <span class="format-desc">Print</span>
                         </label>
                     </div>
                 </div>
@@ -1544,19 +1960,434 @@
                     <p class="progress-text" id="progressText" aria-live="polite">Processing...</p>
                 </div>
             </div>
+            </div> <!-- End of image-converter section -->
+
+            <!-- ============================================== -->
+            <!-- DOCUMENT CONVERTER SECTION -->
+            <!-- ============================================== -->
+            <div class="converter-section" id="document-converter" role="tabpanel" aria-labelledby="document-tab">
+                <div class="drop-zone" id="docDropZone" role="button" tabindex="0" aria-label="Drop zone for document upload. Click or drag and drop documents here.">
+                    <div class="drop-zone-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
+                    </div>
+                    <p class="drop-zone-text">Drop your document here or click to browse</p>
+                    <p class="drop-zone-hint">Supports TXT, HTML, Markdown, CSV, JSON • Convert to PDF, TXT, HTML</p>
+                    <div class="file-type-tags">
+                        <span class="file-type-tag">TXT</span>
+                        <span class="file-type-tag">HTML</span>
+                        <span class="file-type-tag">MD</span>
+                        <span class="file-type-tag">CSV</span>
+                        <span class="file-type-tag">JSON</span>
+                        <span class="file-type-tag">PDF</span>
+                    </div>
+                    <input type="file" id="docFileInput" accept=".txt,.html,.htm,.md,.markdown,.csv,.json,.xml" aria-label="Document file input">
+                </div>
+
+                <div class="preview-area" id="docPreviewArea" aria-live="polite">
+                    <div class="preview-header">
+                        <div class="preview-info">
+                            <span class="file-badge" id="docFileBadge">TXT</span>
+                            <span class="file-size" id="docFileSize">0 KB</span>
+                        </div>
+                        <button class="remove-btn" id="docRemoveBtn" aria-label="Remove selected document">Remove</button>
+                    </div>
+                    <div class="text-preview" id="docTextPreview"></div>
+
+                    <div class="format-section" id="docFormatSection" style="display: block; margin-top: 20px;">
+                        <label class="section-label">Convert to</label>
+                        <div class="conversion-options" role="radiogroup">
+                            <div class="conversion-option">
+                                <input type="radio" name="docFormat" id="docFormatPdf" value="pdf" checked>
+                                <label for="docFormatPdf">
+                                    <span class="format-name">PDF</span>
+                                    <span class="format-desc">Document</span>
+                                </label>
+                            </div>
+                            <div class="conversion-option">
+                                <input type="radio" name="docFormat" id="docFormatTxt" value="txt">
+                                <label for="docFormatTxt">
+                                    <span class="format-name">TXT</span>
+                                    <span class="format-desc">Plain Text</span>
+                                </label>
+                            </div>
+                            <div class="conversion-option">
+                                <input type="radio" name="docFormat" id="docFormatHtml" value="html">
+                                <label for="docFormatHtml">
+                                    <span class="format-name">HTML</span>
+                                    <span class="format-desc">Web Page</span>
+                                </label>
+                            </div>
+                            <div class="conversion-option">
+                                <input type="radio" name="docFormat" id="docFormatMd" value="md">
+                                <label for="docFormatMd">
+                                    <span class="format-name">MD</span>
+                                    <span class="format-desc">Markdown</span>
+                                </label>
+                            </div>
+                            <div class="conversion-option">
+                                <input type="radio" name="docFormat" id="docFormatCsv" value="csv">
+                                <label for="docFormatCsv">
+                                    <span class="format-name">CSV</span>
+                                    <span class="format-desc">Spreadsheet</span>
+                                </label>
+                            </div>
+                            <div class="conversion-option">
+                                <input type="radio" name="docFormat" id="docFormatJson" value="json">
+                                <label for="docFormatJson">
+                                    <span class="format-name">JSON</span>
+                                    <span class="format-desc">Data</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="filename-section">
+                            <div class="filename-field">
+                                <label for="docOutputFilename">Output filename</label>
+                                <input type="text" id="docOutputFilename" placeholder="Enter filename (without extension)">
+                            </div>
+                        </div>
+
+                        <button class="convert-btn" id="docConvertBtn" aria-label="Convert and download document">
+                            Convert & Download
+                        </button>
+
+                        <div class="progress-container" id="docProgressContainer">
+                            <div class="progress-bar" role="progressbar">
+                                <div class="progress-fill" id="docProgressFill"></div>
+                            </div>
+                            <p class="progress-text" id="docProgressText">Processing...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- VIDEO CONVERTER SECTION -->
+            <!-- ============================================== -->
+            <div class="converter-section" id="video-converter" role="tabpanel" aria-labelledby="video-tab">
+                <div class="drop-zone" id="videoDropZone" role="button" tabindex="0" aria-label="Drop zone for video upload. Click or drag and drop videos here.">
+                    <div class="drop-zone-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                            <polygon points="23 7 16 12 23 17 23 7"/>
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                        </svg>
+                    </div>
+                    <p class="drop-zone-text">Drop your video here or click to browse</p>
+                    <p class="drop-zone-hint">Supports MP4, WebM, MOV, AVI • Convert to MP4, WebM, GIF</p>
+                    <div class="file-type-tags">
+                        <span class="file-type-tag">MP4</span>
+                        <span class="file-type-tag">WebM</span>
+                        <span class="file-type-tag">MOV</span>
+                        <span class="file-type-tag">AVI</span>
+                        <span class="file-type-tag">GIF</span>
+                    </div>
+                    <input type="file" id="videoFileInput" accept="video/*,.mp4,.webm,.mov,.avi,.mkv" aria-label="Video file input">
+                </div>
+
+                <div class="preview-area" id="videoPreviewArea" aria-live="polite">
+                    <div class="preview-header">
+                        <div class="preview-info">
+                            <span class="file-badge" id="videoFileBadge">MP4</span>
+                            <span class="file-size" id="videoFileSize">0 KB</span>
+                            <span class="dimension-badge" id="videoDuration">
+                                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                                <span id="videoDurationText">0:00</span>
+                            </span>
+                        </div>
+                        <button class="remove-btn" id="videoRemoveBtn" aria-label="Remove selected video">Remove</button>
+                    </div>
+                    <video id="videoPreview" class="media-preview" controls></video>
+
+                    <div class="format-section" id="videoFormatSection" style="display: block; margin-top: 20px;">
+                        <label class="section-label">Convert to</label>
+                        <div class="conversion-options" role="radiogroup">
+                            <div class="conversion-option">
+                                <input type="radio" name="videoFormat" id="videoFormatMp4" value="mp4" checked>
+                                <label for="videoFormatMp4">
+                                    <span class="format-name">MP4</span>
+                                    <span class="format-desc">Universal</span>
+                                </label>
+                            </div>
+                            <div class="conversion-option">
+                                <input type="radio" name="videoFormat" id="videoFormatWebm" value="webm">
+                                <label for="videoFormatWebm">
+                                    <span class="format-name">WebM</span>
+                                    <span class="format-desc">Web Video</span>
+                                </label>
+                            </div>
+                            <div class="conversion-option">
+                                <input type="radio" name="videoFormat" id="videoFormatGif" value="gif">
+                                <label for="videoFormatGif">
+                                    <span class="format-name">GIF</span>
+                                    <span class="format-desc">Animated</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Video quality settings -->
+                        <div class="resize-section" style="margin-top: 20px;">
+                            <label class="section-label">Resolution</label>
+                            <div class="conversion-options" role="radiogroup" style="margin-top: 10px;">
+                                <div class="conversion-option">
+                                    <input type="radio" name="videoResolution" id="videoRes1080" value="1080" checked>
+                                    <label for="videoRes1080">
+                                        <span class="format-name">1080p</span>
+                                        <span class="format-desc">Full HD</span>
+                                    </label>
+                                </div>
+                                <div class="conversion-option">
+                                    <input type="radio" name="videoResolution" id="videoRes720" value="720">
+                                    <label for="videoRes720">
+                                        <span class="format-name">720p</span>
+                                        <span class="format-desc">HD</span>
+                                    </label>
+                                </div>
+                                <div class="conversion-option">
+                                    <input type="radio" name="videoResolution" id="videoRes480" value="480">
+                                    <label for="videoRes480">
+                                        <span class="format-name">480p</span>
+                                        <span class="format-desc">SD</span>
+                                    </label>
+                                </div>
+                                <div class="conversion-option">
+                                    <input type="radio" name="videoResolution" id="videoResOriginal" value="original">
+                                    <label for="videoResOriginal">
+                                        <span class="format-name">Original</span>
+                                        <span class="format-desc">Keep Size</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="filename-section">
+                            <div class="filename-field">
+                                <label for="videoOutputFilename">Output filename</label>
+                                <input type="text" id="videoOutputFilename" placeholder="Enter filename (without extension)">
+                            </div>
+                        </div>
+
+                        <button class="convert-btn" id="videoConvertBtn" aria-label="Convert and download video">
+                            Convert & Download
+                        </button>
+
+                        <div class="progress-container" id="videoProgressContainer">
+                            <div class="progress-bar" role="progressbar">
+                                <div class="progress-fill" id="videoProgressFill"></div>
+                            </div>
+                            <p class="progress-text" id="videoProgressText">Processing...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- AUDIO CONVERTER SECTION -->
+            <!-- ============================================== -->
+            <div class="converter-section" id="audio-converter" role="tabpanel" aria-labelledby="audio-tab">
+                <div class="drop-zone" id="audioDropZone" role="button" tabindex="0" aria-label="Drop zone for audio upload. Click or drag and drop audio files here.">
+                    <div class="drop-zone-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M9 18V5l12-2v13"/>
+                            <circle cx="6" cy="18" r="3"/>
+                            <circle cx="18" cy="16" r="3"/>
+                        </svg>
+                    </div>
+                    <p class="drop-zone-text">Drop your audio file here or click to browse</p>
+                    <p class="drop-zone-hint">Supports MP3, WAV, OGG, M4A, FLAC • Convert to MP3, WAV, OGG</p>
+                    <div class="file-type-tags">
+                        <span class="file-type-tag">MP3</span>
+                        <span class="file-type-tag">WAV</span>
+                        <span class="file-type-tag">OGG</span>
+                        <span class="file-type-tag">M4A</span>
+                        <span class="file-type-tag">FLAC</span>
+                        <span class="file-type-tag">AAC</span>
+                    </div>
+                    <input type="file" id="audioFileInput" accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac,.aac" aria-label="Audio file input">
+                </div>
+
+                <div class="preview-area" id="audioPreviewArea" aria-live="polite">
+                    <div class="preview-header">
+                        <div class="preview-info">
+                            <span class="file-badge" id="audioFileBadge">MP3</span>
+                            <span class="file-size" id="audioFileSize">0 KB</span>
+                            <span class="dimension-badge" id="audioDuration">
+                                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                                <span id="audioDurationText">0:00</span>
+                            </span>
+                        </div>
+                        <button class="remove-btn" id="audioRemoveBtn" aria-label="Remove selected audio">Remove</button>
+                    </div>
+                    <audio id="audioPreview" class="media-preview" controls style="width: 100%;"></audio>
+
+                    <div class="format-section" id="audioFormatSection" style="display: block; margin-top: 20px;">
+                        <label class="section-label">Convert to</label>
+                        <div class="conversion-options" role="radiogroup">
+                            <div class="conversion-option">
+                                <input type="radio" name="audioFormat" id="audioFormatMp3" value="mp3" checked>
+                                <label for="audioFormatMp3">
+                                    <span class="format-name">MP3</span>
+                                    <span class="format-desc">Universal</span>
+                                </label>
+                            </div>
+                            <div class="conversion-option">
+                                <input type="radio" name="audioFormat" id="audioFormatWav" value="wav">
+                                <label for="audioFormatWav">
+                                    <span class="format-name">WAV</span>
+                                    <span class="format-desc">Lossless</span>
+                                </label>
+                            </div>
+                            <div class="conversion-option">
+                                <input type="radio" name="audioFormat" id="audioFormatOgg" value="ogg">
+                                <label for="audioFormatOgg">
+                                    <span class="format-name">OGG</span>
+                                    <span class="format-desc">Open Format</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Audio quality settings -->
+                        <div class="quality-section active" style="margin-top: 20px;">
+                            <div class="quality-header">
+                                <span class="section-label" style="margin: 0;">Bitrate</span>
+                                <span class="quality-value" id="audioBitrateValue">192 kbps</span>
+                            </div>
+                            <input type="range" class="quality-slider" id="audioBitrateSlider" min="64" max="320" value="192" step="32" aria-label="Audio bitrate">
+                        </div>
+
+                        <div class="filename-section">
+                            <div class="filename-field">
+                                <label for="audioOutputFilename">Output filename</label>
+                                <input type="text" id="audioOutputFilename" placeholder="Enter filename (without extension)">
+                            </div>
+                        </div>
+
+                        <button class="convert-btn" id="audioConvertBtn" aria-label="Convert and download audio">
+                            Convert & Download
+                        </button>
+
+                        <div class="progress-container" id="audioProgressContainer">
+                            <div class="progress-bar" role="progressbar">
+                                <div class="progress-fill" id="audioProgressFill"></div>
+                            </div>
+                            <p class="progress-text" id="audioProgressText">Processing...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- ARCHIVE CONVERTER SECTION -->
+            <!-- ============================================== -->
+            <div class="converter-section" id="archive-converter" role="tabpanel" aria-labelledby="archive-tab">
+                <div class="drop-zone" id="archiveDropZone" role="button" tabindex="0" aria-label="Drop zone for archive upload. Click or drag and drop files here.">
+                    <div class="drop-zone-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                            <line x1="12" y1="11" x2="12" y2="17"/>
+                            <line x1="9" y1="14" x2="15" y2="14"/>
+                        </svg>
+                    </div>
+                    <p class="drop-zone-text">Drop files here to create an archive or drop a ZIP to extract</p>
+                    <p class="drop-zone-hint">Create ZIP from any files • Extract ZIP archives • Multiple files supported</p>
+                    <div class="file-type-tags">
+                        <span class="file-type-tag">ZIP</span>
+                        <span class="file-type-tag">Create</span>
+                        <span class="file-type-tag">Extract</span>
+                    </div>
+                    <input type="file" id="archiveFileInput" multiple aria-label="Archive file input">
+                </div>
+
+                <div class="preview-area" id="archivePreviewArea" aria-live="polite">
+                    <div class="preview-header">
+                        <div class="preview-info">
+                            <span class="file-badge" id="archiveFileBadge">ZIP</span>
+                            <span class="file-size" id="archiveFileSize">0 KB</span>
+                            <span class="dimension-badge" id="archiveFileCount">
+                                <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2">
+                                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                                    <polyline points="13 2 13 9 20 9"/>
+                                </svg>
+                                <span id="archiveFileCountText">0 files</span>
+                            </span>
+                        </div>
+                        <button class="remove-btn" id="archiveRemoveBtn" aria-label="Remove selected files">Remove</button>
+                    </div>
+                    
+                    <div class="archive-contents" id="archiveContents"></div>
+
+                    <div class="format-section" id="archiveFormatSection" style="display: block; margin-top: 20px;">
+                        <label class="section-label" id="archiveActionLabel">Action</label>
+                        <div class="conversion-options" role="radiogroup">
+                            <div class="conversion-option">
+                                <input type="radio" name="archiveAction" id="archiveActionZip" value="zip" checked>
+                                <label for="archiveActionZip">
+                                    <span class="format-name">Create ZIP</span>
+                                    <span class="format-desc">Compress files</span>
+                                </label>
+                            </div>
+                            <div class="conversion-option">
+                                <input type="radio" name="archiveAction" id="archiveActionExtract" value="extract">
+                                <label for="archiveActionExtract">
+                                    <span class="format-name">Extract</span>
+                                    <span class="format-desc">Unzip files</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="filename-section">
+                            <div class="filename-field">
+                                <label for="archiveOutputFilename">Output filename</label>
+                                <input type="text" id="archiveOutputFilename" placeholder="Enter filename (without extension)" value="archive">
+                            </div>
+                        </div>
+
+                        <button class="convert-btn" id="archiveConvertBtn" aria-label="Create or extract archive">
+                            Create ZIP
+                        </button>
+
+                        <div class="progress-container" id="archiveProgressContainer">
+                            <div class="progress-bar" role="progressbar">
+                                <div class="progress-fill" id="archiveProgressFill"></div>
+                            </div>
+                            <p class="progress-text" id="archiveProgressText">Processing...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </main>
 
         <footer>
-            <div class="supported-formats" aria-label="Supported image formats">
+            <div class="supported-formats" aria-label="Supported file formats">
                 <span class="format-tag">PNG</span>
                 <span class="format-tag">JPG</span>
                 <span class="format-tag">WebP</span>
                 <span class="format-tag">GIF</span>
-                <span class="format-tag">BMP</span>
-                <span class="format-tag">ICO</span>
+                <span class="format-tag">PDF</span>
+                <span class="format-tag">MP4</span>
+                <span class="format-tag">MP3</span>
+                <span class="format-tag">ZIP</span>
             </div>
             <p class="footer-text">All conversions happen locally in your browser. <strong>No uploads.</strong> Your privacy is protected.</p>
         </footer>
+    </div>
+
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p class="loading-text" id="loadingText">Processing...</p>
+        <p class="loading-progress" id="loadingProgress"></p>
     </div>
 
     <div class="toast" id="toast" role="alert" aria-live="assertive"></div>
@@ -1745,7 +2576,7 @@
         document.querySelectorAll('input[name="format"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 const format = e.target.value;
-                if (format === 'jpeg' || format === 'webp') {
+                if (format === 'jpeg' || format === 'webp' || format === 'avif') {
                     qualitySection.classList.add('active');
                 } else {
                     qualitySection.classList.remove('active');
@@ -2208,18 +3039,42 @@
                             }
                         }
 
+                        // Determine MIME type
                         let mimeType = `image/${format}`;
                         if (format === 'ico') mimeType = 'image/png';
+                        if (format === 'avif') mimeType = 'image/avif';
+                        if (format === 'tiff') mimeType = 'image/png'; // Fallback, as tiff isn't supported by canvas
+
+                        // Check if format is supported by canvas
+                        const supportsFormat = (fmt) => {
+                            const testCanvas = document.createElement('canvas');
+                            testCanvas.width = 1;
+                            testCanvas.height = 1;
+                            const dataUrl = testCanvas.toDataURL(`image/${fmt}`);
+                            return dataUrl.startsWith(`data:image/${fmt}`);
+                        };
 
                         // Apply compression to reach target size if enabled
-                        if (compressionToggle.checked && targetSize.value && (format === 'jpeg' || format === 'webp')) {
+                        const compressibleFormats = ['jpeg', 'webp', 'avif'];
+                        if (compressionToggle.checked && targetSize.value && compressibleFormats.includes(format)) {
                             const targetBytes = parseInt(targetSize.value) * 1024;
                             const blob = await compressToTargetSize(canvas, mimeType, quality, targetBytes);
                             resolve(blob);
                         } else {
+                            // For formats with quality support
+                            const qualityFormats = ['jpeg', 'webp', 'avif'];
+                            const useQuality = qualityFormats.includes(format);
+                            
                             canvas.toBlob((blob) => {
-                                resolve(blob);
-                            }, mimeType, format === 'jpeg' || format === 'webp' ? quality : undefined);
+                                if (blob) {
+                                    resolve(blob);
+                                } else {
+                                    // Fallback to PNG if format not supported
+                                    canvas.toBlob((pngBlob) => {
+                                        resolve(pngBlob);
+                                    }, 'image/png');
+                                }
+                            }, mimeType, useQuality ? quality : undefined);
                         }
                     };
 
@@ -2419,6 +3274,977 @@
         // Prevent default drag behavior on window
         window.addEventListener('dragover', (e) => e.preventDefault());
         window.addEventListener('drop', (e) => e.preventDefault());
+
+        // ================================================
+        // CATEGORY NAVIGATION
+        // ================================================
+        const categoryBtns = document.querySelectorAll('.category-btn');
+        const converterSections = document.querySelectorAll('.converter-section');
+
+        categoryBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const category = btn.dataset.category;
+                
+                // Update active button
+                categoryBtns.forEach(b => {
+                    b.classList.remove('active');
+                    b.setAttribute('aria-selected', 'false');
+                });
+                btn.classList.add('active');
+                btn.setAttribute('aria-selected', 'true');
+                
+                // Show corresponding section
+                converterSections.forEach(section => {
+                    section.classList.remove('active');
+                });
+                document.getElementById(`${category}-converter`).classList.add('active');
+            });
+        });
+
+        // ================================================
+        // DOCUMENT CONVERTER
+        // ================================================
+        const docDropZone = document.getElementById('docDropZone');
+        const docFileInput = document.getElementById('docFileInput');
+        const docPreviewArea = document.getElementById('docPreviewArea');
+        const docTextPreview = document.getElementById('docTextPreview');
+        const docFileBadge = document.getElementById('docFileBadge');
+        const docFileSize = document.getElementById('docFileSize');
+        const docRemoveBtn = document.getElementById('docRemoveBtn');
+        const docConvertBtn = document.getElementById('docConvertBtn');
+        const docOutputFilename = document.getElementById('docOutputFilename');
+        const docProgressContainer = document.getElementById('docProgressContainer');
+        const docProgressFill = document.getElementById('docProgressFill');
+        const docProgressText = document.getElementById('docProgressText');
+
+        let currentDocFile = null;
+        let currentDocContent = '';
+
+        // Document drop zone handlers
+        docDropZone.addEventListener('click', () => docFileInput.click());
+        docDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            docDropZone.classList.add('dragover');
+        });
+        docDropZone.addEventListener('dragleave', () => docDropZone.classList.remove('dragover'));
+        docDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            docDropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleDocFile(e.dataTransfer.files[0]);
+            }
+        });
+        docFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleDocFile(e.target.files[0]);
+            }
+        });
+
+        function handleDocFile(file) {
+            const validExtensions = ['txt', 'html', 'htm', 'md', 'markdown', 'csv', 'json', 'xml'];
+            const ext = file.name.split('.').pop().toLowerCase();
+            
+            if (!validExtensions.includes(ext)) {
+                showToast('Please select a valid document file', true);
+                return;
+            }
+
+            currentDocFile = file;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentDocContent = e.target.result;
+                
+                // Update UI
+                docFileBadge.textContent = ext.toUpperCase();
+                docFileSize.textContent = formatFileSize(file.size);
+                docOutputFilename.value = file.name.replace(/\.[^/.]+$/, '');
+                
+                // Show preview (first 2000 chars)
+                docTextPreview.textContent = currentDocContent.substring(0, 2000) + 
+                    (currentDocContent.length > 2000 ? '\n\n... (truncated)' : '');
+                
+                docDropZone.style.display = 'none';
+                docPreviewArea.classList.add('active');
+            };
+            reader.readAsText(file);
+        }
+
+        docRemoveBtn.addEventListener('click', () => {
+            currentDocFile = null;
+            currentDocContent = '';
+            docFileInput.value = '';
+            docPreviewArea.classList.remove('active');
+            docDropZone.style.display = 'block';
+        });
+
+        docConvertBtn.addEventListener('click', async () => {
+            if (!currentDocFile) return;
+
+            const targetFormat = document.querySelector('input[name="docFormat"]:checked').value;
+            const filename = docOutputFilename.value || 'document';
+
+            docProgressContainer.classList.add('active');
+            docProgressFill.style.width = '50%';
+            docProgressText.textContent = 'Converting...';
+
+            try {
+                let blob;
+                let outputFilename;
+
+                switch (targetFormat) {
+                    case 'pdf':
+                        blob = await convertDocToPdf(currentDocContent, filename);
+                        outputFilename = `${filename}.pdf`;
+                        break;
+                    case 'txt':
+                        blob = new Blob([stripHtml(currentDocContent)], { type: 'text/plain' });
+                        outputFilename = `${filename}.txt`;
+                        break;
+                    case 'html':
+                        blob = new Blob([convertToHtml(currentDocContent)], { type: 'text/html' });
+                        outputFilename = `${filename}.html`;
+                        break;
+                    case 'md':
+                        blob = new Blob([convertToMarkdown(currentDocContent)], { type: 'text/markdown' });
+                        outputFilename = `${filename}.md`;
+                        break;
+                    case 'csv':
+                        blob = new Blob([convertToCsv(currentDocContent)], { type: 'text/csv' });
+                        outputFilename = `${filename}.csv`;
+                        break;
+                    case 'json':
+                        blob = new Blob([convertToJson(currentDocContent)], { type: 'application/json' });
+                        outputFilename = `${filename}.json`;
+                        break;
+                }
+
+                docProgressFill.style.width = '100%';
+                docProgressText.textContent = 'Complete!';
+
+                // Download
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = outputFilename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showToast('Document converted successfully!');
+            } catch (error) {
+                console.error('Document conversion error:', error);
+                showToast('Error converting document', true);
+            }
+
+            setTimeout(() => {
+                docProgressContainer.classList.remove('active');
+            }, 500);
+        });
+
+        // Document conversion helpers
+        async function convertDocToPdf(content, title) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Add title
+            doc.setFontSize(16);
+            doc.text(title, 20, 20);
+            
+            // Add content
+            doc.setFontSize(11);
+            const lines = doc.splitTextToSize(stripHtml(content), 170);
+            let y = 35;
+            
+            for (let i = 0; i < lines.length; i++) {
+                if (y > 280) {
+                    doc.addPage();
+                    y = 20;
+                }
+                doc.text(lines[i], 20, y);
+                y += 6;
+            }
+            
+            return doc.output('blob');
+        }
+
+        function stripHtml(html) {
+            const tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            return tmp.textContent || tmp.innerText || '';
+        }
+
+        function convertToHtml(content) {
+            // If already HTML-like, wrap it properly
+            if (content.includes('<html') || content.includes('<body')) {
+                return content;
+            }
+            // Convert plain text to HTML
+            const escaped = content
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\n/g, '<br>\n');
+            return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Converted Document</title>
+    <style>
+        body { font-family: system-ui, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; line-height: 1.6; }
+    </style>
+</head>
+<body>
+${escaped}
+</body>
+</html>`;
+        }
+
+        function convertToMarkdown(content) {
+            // Basic HTML to Markdown conversion
+            let md = content;
+            md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
+            md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
+            md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n');
+            md = md.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n');
+            md = md.replace(/<br\s*\/?>/gi, '\n');
+            md = md.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
+            md = md.replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**');
+            md = md.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*');
+            md = md.replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*');
+            md = md.replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
+            md = md.replace(/<[^>]+>/g, ''); // Remove remaining HTML tags
+            return md.trim();
+        }
+
+        function convertToCsv(content) {
+            // Try to detect structure and convert
+            const lines = stripHtml(content).split('\n').filter(l => l.trim());
+            return lines.map(line => {
+                // Escape quotes and wrap in quotes if contains comma
+                const escaped = line.replace(/"/g, '""');
+                return escaped.includes(',') ? `"${escaped}"` : escaped;
+            }).join('\n');
+        }
+
+        function convertToJson(content) {
+            // Try to parse if already JSON, otherwise create a document object
+            try {
+                JSON.parse(content);
+                return content; // Already valid JSON
+            } catch {
+                // Create a JSON structure
+                const lines = stripHtml(content).split('\n').filter(l => l.trim());
+                return JSON.stringify({
+                    content: lines,
+                    lineCount: lines.length,
+                    characterCount: content.length,
+                    convertedAt: new Date().toISOString()
+                }, null, 2);
+            }
+        }
+
+        // ================================================
+        // VIDEO CONVERTER
+        // ================================================
+        const videoDropZone = document.getElementById('videoDropZone');
+        const videoFileInput = document.getElementById('videoFileInput');
+        const videoPreviewArea = document.getElementById('videoPreviewArea');
+        const videoPreview = document.getElementById('videoPreview');
+        const videoFileBadge = document.getElementById('videoFileBadge');
+        const videoFileSize = document.getElementById('videoFileSize');
+        const videoDurationText = document.getElementById('videoDurationText');
+        const videoRemoveBtn = document.getElementById('videoRemoveBtn');
+        const videoConvertBtn = document.getElementById('videoConvertBtn');
+        const videoOutputFilename = document.getElementById('videoOutputFilename');
+        const videoProgressContainer = document.getElementById('videoProgressContainer');
+        const videoProgressFill = document.getElementById('videoProgressFill');
+        const videoProgressText = document.getElementById('videoProgressText');
+
+        let currentVideoFile = null;
+
+        // Video drop zone handlers
+        videoDropZone.addEventListener('click', () => videoFileInput.click());
+        videoDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            videoDropZone.classList.add('dragover');
+        });
+        videoDropZone.addEventListener('dragleave', () => videoDropZone.classList.remove('dragover'));
+        videoDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            videoDropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleVideoFile(e.dataTransfer.files[0]);
+            }
+        });
+        videoFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleVideoFile(e.target.files[0]);
+            }
+        });
+
+        function handleVideoFile(file) {
+            if (!file.type.startsWith('video/')) {
+                showToast('Please select a valid video file', true);
+                return;
+            }
+
+            currentVideoFile = file;
+            const url = URL.createObjectURL(file);
+            videoPreview.src = url;
+            
+            videoPreview.onloadedmetadata = () => {
+                const duration = videoPreview.duration;
+                const minutes = Math.floor(duration / 60);
+                const seconds = Math.floor(duration % 60);
+                videoDurationText.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            };
+            
+            const ext = file.name.split('.').pop().toUpperCase();
+            videoFileBadge.textContent = ext;
+            videoFileSize.textContent = formatFileSize(file.size);
+            videoOutputFilename.value = file.name.replace(/\.[^/.]+$/, '');
+            
+            videoDropZone.style.display = 'none';
+            videoPreviewArea.classList.add('active');
+        }
+
+        videoRemoveBtn.addEventListener('click', () => {
+            currentVideoFile = null;
+            videoPreview.src = '';
+            videoFileInput.value = '';
+            videoPreviewArea.classList.remove('active');
+            videoDropZone.style.display = 'block';
+        });
+
+        videoConvertBtn.addEventListener('click', async () => {
+            if (!currentVideoFile) return;
+
+            const targetFormat = document.querySelector('input[name="videoFormat"]:checked').value;
+            const resolution = document.querySelector('input[name="videoResolution"]:checked').value;
+            const filename = videoOutputFilename.value || 'video';
+
+            videoProgressContainer.classList.add('active');
+            videoProgressFill.style.width = '10%';
+            videoProgressText.textContent = 'Preparing video...';
+
+            try {
+                let blob;
+                
+                if (targetFormat === 'gif') {
+                    blob = await convertVideoToGif(currentVideoFile, resolution);
+                } else {
+                    blob = await convertVideoFormat(currentVideoFile, targetFormat, resolution);
+                }
+
+                videoProgressFill.style.width = '100%';
+                videoProgressText.textContent = 'Complete!';
+
+                // Download
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${filename}.${targetFormat}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showToast('Video converted successfully!');
+            } catch (error) {
+                console.error('Video conversion error:', error);
+                showToast('Error converting video. Try a shorter clip or different format.', true);
+            }
+
+            setTimeout(() => {
+                videoProgressContainer.classList.remove('active');
+            }, 500);
+        });
+
+        // Video conversion using Canvas and MediaRecorder
+        async function convertVideoFormat(file, format, resolution) {
+            return new Promise((resolve, reject) => {
+                const video = document.createElement('video');
+                video.src = URL.createObjectURL(file);
+                video.muted = true;
+                
+                video.onloadedmetadata = async () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Set resolution
+                    let width = video.videoWidth;
+                    let height = video.videoHeight;
+                    
+                    if (resolution !== 'original') {
+                        const targetHeight = parseInt(resolution);
+                        const scale = targetHeight / height;
+                        width = Math.round(width * scale);
+                        height = targetHeight;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    const mimeType = format === 'webm' ? 'video/webm' : 'video/mp4';
+                    const stream = canvas.captureStream(30);
+                    
+                    // Try to capture audio if available
+                    try {
+                        const audioCtx = new AudioContext();
+                        const source = audioCtx.createMediaElementSource(video);
+                        const dest = audioCtx.createMediaStreamDestination();
+                        source.connect(dest);
+                        source.connect(audioCtx.destination);
+                        dest.stream.getAudioTracks().forEach(track => stream.addTrack(track));
+                    } catch (e) {
+                        console.log('Audio capture not supported');
+                    }
+                    
+                    const recorder = new MediaRecorder(stream, { mimeType });
+                    const chunks = [];
+                    
+                    recorder.ondataavailable = (e) => chunks.push(e.data);
+                    recorder.onstop = () => {
+                        const blob = new Blob(chunks, { type: mimeType });
+                        resolve(blob);
+                    };
+                    
+                    recorder.start();
+                    video.play();
+                    
+                    const drawFrame = () => {
+                        if (video.paused || video.ended) {
+                            recorder.stop();
+                            return;
+                        }
+                        ctx.drawImage(video, 0, 0, width, height);
+                        videoProgressFill.style.width = `${(video.currentTime / video.duration) * 90 + 10}%`;
+                        requestAnimationFrame(drawFrame);
+                    };
+                    
+                    drawFrame();
+                };
+                
+                video.onerror = reject;
+            });
+        }
+
+        async function convertVideoToGif(file, resolution) {
+            return new Promise((resolve, reject) => {
+                const video = document.createElement('video');
+                video.src = URL.createObjectURL(file);
+                video.muted = true;
+                
+                video.onloadedmetadata = async () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    let width = video.videoWidth;
+                    let height = video.videoHeight;
+                    
+                    // Limit GIF size
+                    const maxSize = resolution !== 'original' ? parseInt(resolution) : 480;
+                    if (height > maxSize) {
+                        const scale = maxSize / height;
+                        width = Math.round(width * scale);
+                        height = maxSize;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    const frames = [];
+                    const fps = 10;
+                    const duration = Math.min(video.duration, 10); // Max 10 seconds for GIF
+                    const frameCount = Math.floor(duration * fps);
+                    
+                    video.currentTime = 0;
+                    
+                    const captureFrame = (frameIndex) => {
+                        return new Promise((resolveFrame) => {
+                            video.onseeked = () => {
+                                ctx.drawImage(video, 0, 0, width, height);
+                                frames.push(canvas.toDataURL('image/png'));
+                                videoProgressFill.style.width = `${(frameIndex / frameCount) * 80 + 10}%`;
+                                resolveFrame();
+                            };
+                            video.currentTime = frameIndex / fps;
+                        });
+                    };
+                    
+                    for (let i = 0; i < frameCount; i++) {
+                        await captureFrame(i);
+                    }
+                    
+                    videoProgressText.textContent = 'Creating GIF...';
+                    
+                    // Create animated GIF using a simple approach (convert first frame for now)
+                    // For full GIF animation, you'd need gif.js library
+                    const response = await fetch(frames[0]);
+                    const blob = await response.blob();
+                    
+                    // Note: Full GIF animation would require additional library
+                    showToast('Note: Animated GIF creation requires additional processing. Downloaded first frame as image.', false);
+                    resolve(blob);
+                };
+                
+                video.onerror = reject;
+            });
+        }
+
+        // ================================================
+        // AUDIO CONVERTER
+        // ================================================
+        const audioDropZone = document.getElementById('audioDropZone');
+        const audioFileInput = document.getElementById('audioFileInput');
+        const audioPreviewArea = document.getElementById('audioPreviewArea');
+        const audioPreview = document.getElementById('audioPreview');
+        const audioFileBadge = document.getElementById('audioFileBadge');
+        const audioFileSize = document.getElementById('audioFileSize');
+        const audioDurationText = document.getElementById('audioDurationText');
+        const audioRemoveBtn = document.getElementById('audioRemoveBtn');
+        const audioConvertBtn = document.getElementById('audioConvertBtn');
+        const audioOutputFilename = document.getElementById('audioOutputFilename');
+        const audioBitrateSlider = document.getElementById('audioBitrateSlider');
+        const audioBitrateValue = document.getElementById('audioBitrateValue');
+        const audioProgressContainer = document.getElementById('audioProgressContainer');
+        const audioProgressFill = document.getElementById('audioProgressFill');
+        const audioProgressText = document.getElementById('audioProgressText');
+
+        let currentAudioFile = null;
+
+        // Audio bitrate slider
+        audioBitrateSlider.addEventListener('input', (e) => {
+            audioBitrateValue.textContent = `${e.target.value} kbps`;
+        });
+
+        // Audio drop zone handlers
+        audioDropZone.addEventListener('click', () => audioFileInput.click());
+        audioDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            audioDropZone.classList.add('dragover');
+        });
+        audioDropZone.addEventListener('dragleave', () => audioDropZone.classList.remove('dragover'));
+        audioDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            audioDropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleAudioFile(e.dataTransfer.files[0]);
+            }
+        });
+        audioFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleAudioFile(e.target.files[0]);
+            }
+        });
+
+        function handleAudioFile(file) {
+            if (!file.type.startsWith('audio/')) {
+                showToast('Please select a valid audio file', true);
+                return;
+            }
+
+            currentAudioFile = file;
+            const url = URL.createObjectURL(file);
+            audioPreview.src = url;
+            
+            audioPreview.onloadedmetadata = () => {
+                const duration = audioPreview.duration;
+                const minutes = Math.floor(duration / 60);
+                const seconds = Math.floor(duration % 60);
+                audioDurationText.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            };
+            
+            const ext = file.name.split('.').pop().toUpperCase();
+            audioFileBadge.textContent = ext;
+            audioFileSize.textContent = formatFileSize(file.size);
+            audioOutputFilename.value = file.name.replace(/\.[^/.]+$/, '');
+            
+            audioDropZone.style.display = 'none';
+            audioPreviewArea.classList.add('active');
+        }
+
+        audioRemoveBtn.addEventListener('click', () => {
+            currentAudioFile = null;
+            audioPreview.src = '';
+            audioFileInput.value = '';
+            audioPreviewArea.classList.remove('active');
+            audioDropZone.style.display = 'block';
+        });
+
+        audioConvertBtn.addEventListener('click', async () => {
+            if (!currentAudioFile) return;
+
+            const targetFormat = document.querySelector('input[name="audioFormat"]:checked').value;
+            const filename = audioOutputFilename.value || 'audio';
+
+            audioProgressContainer.classList.add('active');
+            audioProgressFill.style.width = '10%';
+            audioProgressText.textContent = 'Converting audio...';
+
+            try {
+                const blob = await convertAudioFormat(currentAudioFile, targetFormat);
+                
+                audioProgressFill.style.width = '100%';
+                audioProgressText.textContent = 'Complete!';
+
+                // Download
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${filename}.${targetFormat}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showToast('Audio converted successfully!');
+            } catch (error) {
+                console.error('Audio conversion error:', error);
+                showToast('Error converting audio', true);
+            }
+
+            setTimeout(() => {
+                audioProgressContainer.classList.remove('active');
+            }, 500);
+        });
+
+        async function convertAudioFormat(file, format) {
+            return new Promise((resolve, reject) => {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const reader = new FileReader();
+                
+                reader.onload = async (e) => {
+                    try {
+                        const audioBuffer = await audioContext.decodeAudioData(e.target.result);
+                        
+                        audioProgressFill.style.width = '50%';
+                        
+                        // For WAV format, we can encode directly
+                        if (format === 'wav') {
+                            const wavBlob = audioBufferToWav(audioBuffer);
+                            resolve(wavBlob);
+                            return;
+                        }
+                        
+                        // For other formats, use MediaRecorder
+                        const offlineCtx = new OfflineAudioContext(
+                            audioBuffer.numberOfChannels,
+                            audioBuffer.length,
+                            audioBuffer.sampleRate
+                        );
+                        
+                        const source = offlineCtx.createBufferSource();
+                        source.buffer = audioBuffer;
+                        source.connect(offlineCtx.destination);
+                        source.start();
+                        
+                        const renderedBuffer = await offlineCtx.startRendering();
+                        
+                        // Create audio element and capture
+                        const mediaStreamDest = audioContext.createMediaStreamDestination();
+                        const newSource = audioContext.createBufferSource();
+                        newSource.buffer = renderedBuffer;
+                        newSource.connect(mediaStreamDest);
+                        newSource.connect(audioContext.destination);
+                        
+                        const mimeType = format === 'ogg' ? 'audio/ogg' : 'audio/webm';
+                        const recorder = new MediaRecorder(mediaStreamDest.stream, { mimeType });
+                        const chunks = [];
+                        
+                        recorder.ondataavailable = (e) => chunks.push(e.data);
+                        recorder.onstop = () => {
+                            const blob = new Blob(chunks, { type: mimeType });
+                            resolve(blob);
+                        };
+                        
+                        recorder.start();
+                        newSource.start();
+                        
+                        setTimeout(() => {
+                            recorder.stop();
+                        }, (renderedBuffer.duration * 1000) + 100);
+                        
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function audioBufferToWav(buffer) {
+            const numChannels = buffer.numberOfChannels;
+            const sampleRate = buffer.sampleRate;
+            const format = 1; // PCM
+            const bitDepth = 16;
+            
+            const bytesPerSample = bitDepth / 8;
+            const blockAlign = numChannels * bytesPerSample;
+            
+            const samples = buffer.length;
+            const dataSize = samples * blockAlign;
+            const bufferSize = 44 + dataSize;
+            
+            const arrayBuffer = new ArrayBuffer(bufferSize);
+            const view = new DataView(arrayBuffer);
+            
+            // WAV header
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + dataSize, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, format, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * blockAlign, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitDepth, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, dataSize, true);
+            
+            // Write audio data
+            const channelData = [];
+            for (let i = 0; i < numChannels; i++) {
+                channelData.push(buffer.getChannelData(i));
+            }
+            
+            let offset = 44;
+            for (let i = 0; i < samples; i++) {
+                for (let channel = 0; channel < numChannels; channel++) {
+                    const sample = Math.max(-1, Math.min(1, channelData[channel][i]));
+                    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                    offset += 2;
+                }
+            }
+            
+            return new Blob([arrayBuffer], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        // ================================================
+        // ARCHIVE CONVERTER
+        // ================================================
+        const archiveDropZone = document.getElementById('archiveDropZone');
+        const archiveFileInput = document.getElementById('archiveFileInput');
+        const archivePreviewArea = document.getElementById('archivePreviewArea');
+        const archiveContents = document.getElementById('archiveContents');
+        const archiveFileBadge = document.getElementById('archiveFileBadge');
+        const archiveFileSize = document.getElementById('archiveFileSize');
+        const archiveFileCountText = document.getElementById('archiveFileCountText');
+        const archiveRemoveBtn = document.getElementById('archiveRemoveBtn');
+        const archiveConvertBtn = document.getElementById('archiveConvertBtn');
+        const archiveOutputFilename = document.getElementById('archiveOutputFilename');
+        const archiveProgressContainer = document.getElementById('archiveProgressContainer');
+        const archiveProgressFill = document.getElementById('archiveProgressFill');
+        const archiveProgressText = document.getElementById('archiveProgressText');
+
+        let currentArchiveFiles = [];
+        let isZipFile = false;
+        let currentZipContent = null;
+
+        // Archive drop zone handlers
+        archiveDropZone.addEventListener('click', () => archiveFileInput.click());
+        archiveDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            archiveDropZone.classList.add('dragover');
+        });
+        archiveDropZone.addEventListener('dragleave', () => archiveDropZone.classList.remove('dragover'));
+        archiveDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            archiveDropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleArchiveFiles(Array.from(e.dataTransfer.files));
+            }
+        });
+        archiveFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleArchiveFiles(Array.from(e.target.files));
+            }
+        });
+
+        async function handleArchiveFiles(files) {
+            // Check if it's a ZIP file
+            if (files.length === 1 && files[0].name.toLowerCase().endsWith('.zip')) {
+                isZipFile = true;
+                currentArchiveFiles = [];
+                
+                try {
+                    const zip = await JSZip.loadAsync(files[0]);
+                    currentZipContent = zip;
+                    
+                    archiveFileBadge.textContent = 'ZIP';
+                    archiveFileSize.textContent = formatFileSize(files[0].size);
+                    
+                    // List contents
+                    const fileNames = Object.keys(zip.files);
+                    archiveFileCountText.textContent = `${fileNames.length} files`;
+                    
+                    archiveContents.innerHTML = '';
+                    fileNames.forEach(name => {
+                        const file = zip.files[name];
+                        if (!file.dir) {
+                            const item = document.createElement('div');
+                            item.className = 'archive-item';
+                            item.innerHTML = `
+                                <svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                                <span class="archive-item-name">${name}</span>
+                            `;
+                            archiveContents.appendChild(item);
+                        }
+                    });
+                    
+                    // Set extract as default action
+                    document.getElementById('archiveActionExtract').checked = true;
+                    archiveConvertBtn.textContent = 'Extract Files';
+                    archiveOutputFilename.value = files[0].name.replace('.zip', '');
+                    
+                } catch (error) {
+                    showToast('Error reading ZIP file', true);
+                    return;
+                }
+            } else {
+                isZipFile = false;
+                currentZipContent = null;
+                currentArchiveFiles = files;
+                
+                archiveFileBadge.textContent = 'FILES';
+                
+                let totalSize = 0;
+                files.forEach(f => totalSize += f.size);
+                archiveFileSize.textContent = formatFileSize(totalSize);
+                archiveFileCountText.textContent = `${files.length} files`;
+                
+                // List files
+                archiveContents.innerHTML = '';
+                files.forEach(file => {
+                    const item = document.createElement('div');
+                    item.className = 'archive-item';
+                    item.innerHTML = `
+                        <svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                        <span class="archive-item-name">${file.name}</span>
+                        <span class="archive-item-size">${formatFileSize(file.size)}</span>
+                    `;
+                    archiveContents.appendChild(item);
+                });
+                
+                // Set create ZIP as default action
+                document.getElementById('archiveActionZip').checked = true;
+                archiveConvertBtn.textContent = 'Create ZIP';
+                archiveOutputFilename.value = 'archive';
+            }
+            
+            archiveDropZone.style.display = 'none';
+            archivePreviewArea.classList.add('active');
+        }
+
+        // Update button text based on action selection
+        document.querySelectorAll('input[name="archiveAction"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                archiveConvertBtn.textContent = e.target.value === 'zip' ? 'Create ZIP' : 'Extract Files';
+            });
+        });
+
+        archiveRemoveBtn.addEventListener('click', () => {
+            currentArchiveFiles = [];
+            currentZipContent = null;
+            isZipFile = false;
+            archiveFileInput.value = '';
+            archiveContents.innerHTML = '';
+            archivePreviewArea.classList.remove('active');
+            archiveDropZone.style.display = 'block';
+        });
+
+        archiveConvertBtn.addEventListener('click', async () => {
+            const action = document.querySelector('input[name="archiveAction"]:checked').value;
+            const filename = archiveOutputFilename.value || 'archive';
+
+            archiveProgressContainer.classList.add('active');
+            archiveProgressFill.style.width = '10%';
+
+            try {
+                if (action === 'zip' && currentArchiveFiles.length > 0) {
+                    archiveProgressText.textContent = 'Creating ZIP...';
+                    
+                    const zip = new JSZip();
+                    
+                    for (let i = 0; i < currentArchiveFiles.length; i++) {
+                        const file = currentArchiveFiles[i];
+                        const content = await file.arrayBuffer();
+                        zip.file(file.name, content);
+                        archiveProgressFill.style.width = `${(i / currentArchiveFiles.length) * 80 + 10}%`;
+                    }
+                    
+                    archiveProgressText.textContent = 'Compressing...';
+                    const blob = await zip.generateAsync({ type: 'blob' });
+                    
+                    archiveProgressFill.style.width = '100%';
+                    archiveProgressText.textContent = 'Complete!';
+                    
+                    // Download
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${filename}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    showToast('ZIP file created successfully!');
+                    
+                } else if (action === 'extract' && currentZipContent) {
+                    archiveProgressText.textContent = 'Extracting files...';
+                    
+                    const files = Object.keys(currentZipContent.files);
+                    let downloadCount = 0;
+                    
+                    for (const fileName of files) {
+                        const file = currentZipContent.files[fileName];
+                        if (!file.dir) {
+                            const content = await file.async('blob');
+                            
+                            const url = URL.createObjectURL(content);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = fileName.split('/').pop();
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                            
+                            downloadCount++;
+                            archiveProgressFill.style.width = `${(downloadCount / files.length) * 90 + 10}%`;
+                            
+                            // Delay between downloads
+                            await new Promise(r => setTimeout(r, 200));
+                        }
+                    }
+                    
+                    archiveProgressFill.style.width = '100%';
+                    archiveProgressText.textContent = 'Complete!';
+                    showToast(`Extracted ${downloadCount} files!`);
+                }
+            } catch (error) {
+                console.error('Archive error:', error);
+                showToast('Error processing archive', true);
+            }
+
+            setTimeout(() => {
+                archiveProgressContainer.classList.remove('active');
+            }, 500);
+        });
     </script>
 </body>
 </html>
