@@ -901,6 +901,58 @@
             margin-top: 10px;
         }
 
+        /* Remove Background section */
+        .remove-bg-section {
+            margin-top: 15px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+        }
+
+        .remove-bg-inputs {
+            display: none;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .remove-bg-inputs.active {
+            display: flex;
+        }
+
+        .bg-threshold-value {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            min-width: 100px;
+        }
+
+        .remove-bg-warning {
+            margin-top: 15px;
+            padding: 12px 16px;
+            background: rgba(254, 228, 64, 0.1);
+            border: 1px solid var(--accent-yellow);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: var(--accent-yellow);
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .remove-bg-warning.active {
+            display: flex;
+        }
+
+        .remove-bg-warning svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            flex-shrink: 0;
+        }
+
         .resize-toggle {
             display: flex;
             align-items: center;
@@ -1940,6 +1992,33 @@
                     <p class="compression-hint">Note: Compression works best with JPEG and WebP formats. Very low target sizes may reduce image quality.</p>
                 </div>
 
+                <!-- Remove Background section -->
+                <div class="remove-bg-section">
+                    <label class="resize-toggle">
+                        <input type="checkbox" id="removeBgToggle">
+                        <span class="toggle-switch"></span>
+                        <span class="section-label" style="margin: 0;">Remove background</span>
+                    </label>
+                    <div class="remove-bg-inputs" id="removeBgInputs">
+                        <div class="compression-field">
+                            <label for="bgThreshold">Color threshold</label>
+                            <input type="range" class="quality-slider" id="bgThreshold" min="0" max="100" value="30" aria-label="Background color similarity threshold">
+                        </div>
+                        <div class="bg-threshold-value">
+                            <span>Threshold: </span><span id="bgThresholdValue">30</span>
+                        </div>
+                    </div>
+                    <div class="remove-bg-warning" id="removeBgWarning">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="16" x2="12" y2="12"/>
+                            <line x1="12" y1="8" x2="12.01" y2="8"/>
+                        </svg>
+                        <span id="removeBgWarningText">Select a format that supports transparency (PNG, WebP, AVIF, GIF, or ICO) for best results.</span>
+                    </div>
+                    <p class="compression-hint">Detects and removes the dominant background color. Works best with solid or near-solid backgrounds. Adjust threshold for sensitivity.</p>
+                </div>
+
                 <div class="quality-section" id="qualitySection">
                     <div class="quality-header">
                         <span class="section-label" style="margin: 0;">Quality</span>
@@ -2445,6 +2524,11 @@
         const maxDimension = document.getElementById('maxDimension');
         const sizeEstimate = document.getElementById('sizeEstimate');
         const sizeEstimateText = document.getElementById('sizeEstimateText');
+        const removeBgToggle = document.getElementById('removeBgToggle');
+        const removeBgInputs = document.getElementById('removeBgInputs');
+        const bgThreshold = document.getElementById('bgThreshold');
+        const bgThresholdValue = document.getElementById('bgThresholdValue');
+        const removeBgWarning = document.getElementById('removeBgWarning');
 
         let currentFile = null;
         let currentFiles = [];
@@ -2639,6 +2723,42 @@
         targetSize.addEventListener('input', updateSizeEstimate);
         maxDimension.addEventListener('input', updateSizeEstimate);
 
+        // Remove background toggle handler
+        removeBgToggle.addEventListener('change', () => {
+            if (removeBgToggle.checked) {
+                removeBgInputs.classList.add('active');
+                updateRemoveBgWarning();
+            } else {
+                removeBgInputs.classList.remove('active');
+                removeBgWarning.classList.remove('active');
+            }
+        });
+
+        // Background threshold slider handler
+        bgThreshold.addEventListener('input', () => {
+            bgThresholdValue.textContent = bgThreshold.value;
+        });
+
+        // Update remove background warning based on selected format
+        function updateRemoveBgWarning() {
+            if (!removeBgToggle.checked) {
+                removeBgWarning.classList.remove('active');
+                return;
+            }
+            const selectedFormat = document.querySelector('input[name="format"]:checked').value;
+            const transparencyFormats = ['png', 'webp', 'avif', 'gif', 'ico'];
+            if (!transparencyFormats.includes(selectedFormat)) {
+                removeBgWarning.classList.add('active');
+            } else {
+                removeBgWarning.classList.remove('active');
+            }
+        }
+
+        // Listen for format changes to update remove background warning
+        document.querySelectorAll('input[name="format"]').forEach(radio => {
+            radio.addEventListener('change', updateRemoveBgWarning);
+        });
+
         // Update size estimate
         function updateSizeEstimate() {
             if (!compressionToggle.checked || !currentFile) {
@@ -2735,6 +2855,10 @@
             flipH = false;
             flipV = false;
             updateImageTransform();
+            // Reset remove background toggle
+            removeBgToggle.checked = false;
+            removeBgInputs.classList.remove('active');
+            removeBgWarning.classList.remove('active');
         }
 
         // Image transformation handlers
@@ -2993,6 +3117,63 @@
             ctx.restore();
         }
 
+        // Remove background from canvas by detecting dominant edge color
+        function removeBackground(canvas, threshold) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            const w = canvas.width;
+            const h = canvas.height;
+
+            // Sample edge pixels to determine background color
+            const edgePixels = [];
+            for (let x = 0; x < w; x++) {
+                // Top row
+                const topIdx = x * 4;
+                edgePixels.push([data[topIdx], data[topIdx + 1], data[topIdx + 2]]);
+                // Bottom row
+                const botIdx = ((h - 1) * w + x) * 4;
+                edgePixels.push([data[botIdx], data[botIdx + 1], data[botIdx + 2]]);
+            }
+            for (let y = 1; y < h - 1; y++) {
+                // Left column
+                const leftIdx = (y * w) * 4;
+                edgePixels.push([data[leftIdx], data[leftIdx + 1], data[leftIdx + 2]]);
+                // Right column
+                const rightIdx = (y * w + w - 1) * 4;
+                edgePixels.push([data[rightIdx], data[rightIdx + 1], data[rightIdx + 2]]);
+            }
+
+            // Compute average edge color as background color
+            let rSum = 0, gSum = 0, bSum = 0;
+            for (const [r, g, b] of edgePixels) {
+                rSum += r;
+                gSum += g;
+                bSum += b;
+            }
+            const count = edgePixels.length;
+            const bgR = Math.round(rSum / count);
+            const bgG = Math.round(gSum / count);
+            const bgB = Math.round(bSum / count);
+
+            // Scale threshold: input 0-100 maps to color distance 0-255
+            const dist = threshold * (255 / 100);
+            const distSq = dist * dist;
+
+            // Remove pixels similar to background color (compare squared distances to avoid sqrt)
+            for (let i = 0; i < data.length; i += 4) {
+                const dr = data[i] - bgR;
+                const dg = data[i + 1] - bgG;
+                const db = data[i + 2] - bgB;
+                const colorDistSq = dr * dr + dg * dg + db * db;
+                if (colorDistSq <= distSq) {
+                    data[i + 3] = 0; // Set alpha to 0 (transparent)
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
         // Process single image
         async function processImage(file, format, quality) {
             return new Promise((resolve, reject) => {
@@ -3046,6 +3227,12 @@
                             } else {
                                 ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
                             }
+                        }
+
+                        // Apply background removal if enabled
+                        if (removeBgToggle.checked) {
+                            const threshold = parseInt(bgThreshold.value);
+                            removeBackground(canvas, threshold);
                         }
 
                         // Determine MIME type
