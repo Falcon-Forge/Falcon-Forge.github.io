@@ -3157,15 +3157,16 @@
             const bgB = Math.round(bSum / count);
 
             // Scale threshold: input 0-100 maps to color distance 0-255
-            const dist = threshold * 2.55;
+            const dist = threshold * (255 / 100);
+            const distSq = dist * dist;
 
-            // Remove pixels similar to background color
+            // Remove pixels similar to background color (compare squared distances to avoid sqrt)
             for (let i = 0; i < data.length; i += 4) {
                 const dr = data[i] - bgR;
                 const dg = data[i + 1] - bgG;
                 const db = data[i + 2] - bgB;
-                const colorDist = Math.sqrt(dr * dr + dg * dg + db * db);
-                if (colorDist <= dist) {
+                const colorDistSq = dr * dr + dg * dg + db * db;
+                if (colorDistSq <= distSq) {
                     data[i + 3] = 0; // Set alpha to 0 (transparent)
                 }
             }
